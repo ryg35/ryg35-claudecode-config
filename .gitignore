@@ -1,0 +1,158 @@
+# === Private / Session Data ===
+history.jsonl
+sessions/
+session-env/
+shell-snapshots/
+file-history/
+paste-cache/
+screenshots/
+cache/
+debug/
+telemetry/
+stats-cache.json
+mcp-needs-auth-cache.json
+*.log
+*.jsonl
+
+# === Personal Context ===
+memory/
+MEMORY.md
+projects/
+tasks/
+todos/
+plans/
+teams/
+
+# === Session handoff (private session data; only README and .gitignore stay public) ===
+handoff/*
+!handoff/README.md
+!handoff/.gitignore
+.last-update-result.json
+
+# === Plugins (separate repos) ===
+plugins/
+
+# === MCP Servers (contains node_modules, credentials) ===
+mcp-servers/
+.mcp.json
+mcp-*.json
+
+# === IDE / System ===
+ide/
+.DS_Store
+.claude
+.vscode/
+.idea/
+
+# === Chrome Native Host (contains version-specific paths) ===
+chrome/
+
+# === Statsig (internal analytics) ===
+statsig/
+
+# === Internal Config (contains full paths / user-specific IDs) ===
+.claude.json
+.claude.json.backup
+.credentials.json
+backups/
+
+# === Generated ===
+statusline-command.sh
+
+# === Business-specific (contains PII / internal info) ===
+commands/report.md
+commands/weekly-review.md
+skills/fetch-receipts/
+skills/biz-analysis/
+skills/onething-lt/
+
+# === Installed skill packs (reinstallable dependencies; listed in README) ===
+skills/plaud-*/
+skills/agents-sdk/
+skills/cloudflare/
+skills/cloudflare-*/
+skills/durable-objects/
+skills/sandbox-sdk/
+skills/turnstile-spin/
+skills/web-perf/
+skills/workers-best-practices/
+skills/wrangler/
+skills/issue-filer/
+skills/idea-to-lp/
+
+# === Secrets / Credentials ===
+*.pem
+*.key
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+*secret*
+*credential*
+*token*
+*api_key*
+*apikey*
+id_rsa*
+id_ed25519*
+id_ecdsa*
+id_dsa*
+*.ppk
+*.jks
+*.keystore
+.npmrc
+.pypirc
+.netrc
+.htpasswd
+kubeconfig
+*.tfstate*
+*.tfvars
+known_hosts
+auth.json
+authorized_keys
+
+# === Local runtime / generated (config-gc, MCP locks, local overrides) ===
+settings.local.json
+gc_log.md
+_gc_trash/
+*.lock
+node_modules/
+worktrees/
+.worktrees/
+
+# === OAuth / Auth caches ===
+*.oauth
+*.auth
+oauth-*.json
+auth-cache/
+token-cache/
+
+# === Personal notes / work data ===
+Obsidian/
+vault/
+notes/
+receipts/
+日報/
+weekly-reviews/
+
+# === Temporary / OS ===
+*.swp
+*.swo
+*~
+.Trash-*
+Thumbs.db
+ehthumbs.db
+*.bak
+.last-cleanup
+image-cache/
+
+# === Paperclip-managed symlinks (machine-specific absolute paths) ===
+# paperclip CLI auto-creates these symlinks pointing to local agent-company
+# checkouts and ~/.paperclip/instances/. They contain absolute paths that
+# only resolve on the host where they were generated, so they must not be
+# committed to the shared dotfiles repo.
+skills/.system
+skills/paperclip
+skills/paperclip-create-agent
+skills/paperclip-create-plugin
+skills/para-memory-files
