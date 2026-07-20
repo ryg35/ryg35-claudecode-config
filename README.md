@@ -1,6 +1,16 @@
 # Claude Code Harness
 
-Claude Code(`~/.claude/`) 個人用ハーネス設定。日々の開発を、少数の**オーケストレーションcommand**に集約して回すための設定群。
+Claude Code(`~/.claude/`)向けのハーネス設定一式(OSS / MIT)。日々の開発を少数の**オーケストレーションcommand**に集約し、agent・skill・防御hookでガードレールを敷いて回すための構成。そのまま導入しても、部品単位で自分の `~/.claude/` に持ち帰っても使える。
+
+**入っているもの:**
+
+- **オーケストレーションcommand 5本** — `/project-init` `/vibe` `/pre-pr-review` `/commit-push` `/review-prs`。日々の開発はほぼこの5つで完結する
+- **specialized agent 36本** — planner / architect / tdd-guide / security-reviewer / tracer など。実装と審査を別モデル系統に分ける分業前提の構成
+- **skill群** — 合議計画(`ralplan`)、Codex収束レビュー(`codex-converge`)、持続実行(`ralph` / `ultrawork`)ほか
+- **防御hook** — `scripts/pre-tool-enforcer.sh` がコマンドをトークナイズ解析し、main直push・force push・`gh repo create --push` 等を前方一致denyでは防げない形まで含めてブロック
+- **開発規範(`rules/`)とテンプレート** — coding-style / testing / security / git-workflow、Burn Log(同じ失敗を2回したらルール化)などの運用規約
+
+実運用中の `~/.claude/` からサニタイズして公開しているスナップショットであり、思想が強めのopinionatedな構成。まず「そのまま使う前に読むこと」(下記)を読んでから導入してほしい。
 
 ---
 
@@ -184,16 +194,20 @@ Codexの独立reviewに晒される前提の緊張感を持って、自分の変
 
 ## セットアップ
 
-このリポは `~/.claude/` 配下をそのまま保持する構成。別マシンで使う場合:
+このリポは `~/.claude/` 配下をそのまま保持する構成。
 
 ```bash
-# ~/.claude が未作成の場合
-git clone <this-repo> ~/.claude
+# まるごと導入 (~/.claude が未作成の場合)
+git clone https://github.com/ryg35/ryg35-claudecode-config.git ~/.claude
 
 # 既存の ~/.claude を残したい場合は任意の場所にcloneしてsymlink
-git clone <this-repo> ~/dotfiles/claude
+git clone https://github.com/ryg35/ryg35-claudecode-config.git ~/dotfiles/claude
 ln -s ~/dotfiles/claude ~/.claude
 ```
+
+まるごとではなく**部品単位で取り込むのも正攻法**。`agents/` `skills/` `commands/` の各ファイルは独立して動くので、欲しいものだけ自分の `~/.claude/` にコピーすればいい。ただし `settings.json` の hooks に依存するもの(pre-tool-enforcer 等)は対応する hooks 設定も一緒に持っていくこと。
+
+自分用に育てていくなら fork を推奨。Codex CLI 前提のモデルルーティング(冒頭の分業モデル)は、Codex を使わないなら `skills/plan/SKILL.md` の Provider overrides と `rules/agents.md` の Codex 節を外せば Claude 単体でも成立する。
 
 secret系やローカル固有の状態(`.claude.json`, `cache/`, `sessions/`, `todos/` 等)は `.gitignore` で除外済み。
 
@@ -212,6 +226,16 @@ secret系やローカル固有の状態(`.claude.json`, `cache/`, `sessions/`, `
 - [`rules/`](./rules/) — coding-style / testing / security / git-workflow / performance / agents
 - [`templates/PROJECT-SEED.md`](./templates/PROJECT-SEED.md) — docs生成の単一source of truth
 - [`handoff/README.md`](./handoff/README.md) — セッション間ハンドオフ規約(memory は使わない方針)
+
+## Contributing
+
+Issue / PR 歓迎。特に歓迎するもの:
+
+- hook・enforcer のすり抜けパターン報告(再現コマンド付きだと最高)
+- agent / skill の発火条件が期待とずれるケース
+- 他環境(Linux / Codex なし構成)での動作報告
+
+このリポは作者の実運用 `~/.claude/` のサニタイズ済みスナップショットとして更新されるため、大きな構造変更のPRは先にIssueで方向性を相談してほしい。
 
 ## ライセンスと出典
 
