@@ -4,11 +4,11 @@ Claude Code(`~/.claude/`)向けのハーネス設定一式(OSS / MIT)。日々�
 
 **入っているもの:**
 
-- **オーケストレーションcommand 5本** — `/project-init` `/vibe` `/pre-pr-review` `/commit-push` `/review-prs`。日々の開発はほぼこの5つで完結する
-- **specialized agent 36本** — planner / architect / tdd-guide / security-reviewer / tracer など。実装と審査を別モデル系統に分ける分業前提の構成
-- **skill群** — 合議計画(`ralplan`)、Codex収束レビュー(`codex-converge`)、持続実行(`ralph` / `ultrawork`)ほか
-- **防御hook** — `scripts/pre-tool-enforcer.sh` がコマンドをトークナイズ解析し、main直push・force push・`gh repo create --push` 等を前方一致denyでは防げない形まで含めてブロック
-- **開発規範(`rules/`)とテンプレート** — coding-style / testing / security / git-workflow、Burn Log(同じ失敗を2回したらルール化)などの運用規約
+- **オーケストレーションcommand 5本**: `/project-init` `/vibe` `/pre-pr-review` `/commit-push` `/review-prs`。日々の開発はほぼこの5つで完結する
+- **specialized agent 36本**: planner / architect / tdd-guide / security-reviewer / tracer など。実装と審査を別モデル系統に分ける分業前提の構成
+- **skill群**: 合議計画(`ralplan`)、Codex収束レビュー(`codex-converge`)、持続実行(`ralph` / `ultrawork`)ほか
+- **防御hook**: `scripts/pre-tool-enforcer.sh` がコマンドをトークナイズ解析し、main直push・force push・`gh repo create --push` 等を前方一致denyでは防げない形まで含めてブロック
+- **開発規範(`rules/`)とテンプレート**: coding-style / testing / security / git-workflow、Burn Log(同じ失敗を2回したらルール化)などの運用規約
 
 実運用中の `~/.claude/` からサニタイズして公開しているスナップショットであり、思想が強めのopinionatedな構成。まず「そのまま使う前に読むこと」(下記)を読んでから導入してほしい。
 
