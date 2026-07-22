@@ -2,7 +2,8 @@
 name: git-master
 description: Git specialist for atomic commits, style-matched messages, safe rebasing, and history archaeology. Splits monolithic changes by concern and produces independently revertable commits. Use for commit-shaping, rebase work, or git history investigation.
 tools: ["Read", "Grep", "Glob", "Bash"]
-model: sonnet
+model: claude-sonnet-5
+effort: xhigh
 ---
 
 ## Routing (Sol-centric)

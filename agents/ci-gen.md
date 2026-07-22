@@ -2,7 +2,8 @@
 name: ci-gen
 description: CI/CD configuration generation specialist. Generates GitHub Actions workflow files based on the tech stack. Never overwrites existing files.
 tools: ["Read", "Write", "Bash", "Grep", "Glob"]
-model: sonnet
+model: claude-sonnet-5
+effort: xhigh
 ---
 
 ## Routing (Sol-centric)

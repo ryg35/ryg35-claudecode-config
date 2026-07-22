@@ -1,21 +1,23 @@
 # Performance Optimization
 
-## Model Selection Strategy
+## Model Selection Strategy (Claude 5 era, updated 2026-07-22)
 
-**Haiku** (Lightest weight, lowest cost):
-- Lightweight agents with frequent invocation
-- Pair programming and code generation
-- Worker agents in multi-agent systems
+Role split decided by user (Fable quota is tight; see `~/.claude/rules/model-delegation.md`):
 
-**Sonnet** (Best for coding):
-- Main development work
-- Orchestrating multi-agent workflows
-- Complex coding tasks
+**Fable (main session)** ... judgment only:
+- User dialogue, decisions, synthesis of subagent results
+- Orchestration (routing work, launching agents in parallel)
+- NEVER worker tasks that a subagent can do
 
-**Opus** (Deepest reasoning):
-- Complex architectural decisions
-- Maximum reasoning requirements
-- Research and analysis tasks
+**Sonnet 5 + effort xhigh** ... default worker:
+- All implementation, exploration, planning drafts, docs, tests
+- Worker agents in `~/.claude/agents/` are pinned to `model: claude-sonnet-5` + `effort: xhigh`
+
+**Opus & Codex** ... reviewer tier:
+- code-reviewer / security-reviewer / critic / verifier / database-reviewer / typescript-reviewer / silent-failure-hunter run on Opus
+- Codex (`codex-exec-bg.sh`) for independent second opinions and executor-role default per `~/.claude/rules/agents.md`
+
+**Haiku** ... trivial mechanical tasks only (rename sweeps, format-only passes)
 
 ## Context Window Management
 

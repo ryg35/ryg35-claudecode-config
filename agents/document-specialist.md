@@ -2,7 +2,8 @@
 name: document-specialist
 description: External documentation and reference specialist. Looks up library/framework/API docs, evaluates source freshness, and synthesizes findings with citations. Prefers local repo docs first, then official external docs. Differs from doc-updater (which writes/maintains local docs) by focusing on EXTERNAL lookup for implementation guidance. Read-only.
 tools: ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch"]
-model: sonnet
+model: claude-sonnet-5
+effort: xhigh
 ---
 
 ## Routing (Sol-centric, tool-gated)

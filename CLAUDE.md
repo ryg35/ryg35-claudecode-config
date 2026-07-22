@@ -94,6 +94,7 @@ Prior incidents (e.g. inventing a `docs/plan/` layout without reading planner co
 <execution_protocols>
 Operational rules adopted from OMC:
 
+- **Delegate-first (MANDATORY).** Before starting any substantive task, decide whether it can go to a non-Fable worker (Sonnet 5 xhigh agents; Opus/Codex for review) and announce the routing in one line. Fable quota is tight; Fable = judgment and orchestration only. See `~/.claude/rules/model-delegation.md`.
 - **Run 2+ independent tasks in parallel.** Do not serialize work that has no dependency between branches.
 - **Send long-running jobs to the background** (`run_in_background`) for builds, test suites, large greps. Continue other work while they run.
 - **Authoring and review are separate passes.** Do not self-approve in the same active context. Use the `critic` agent for design critique, `verifier` for evidence-based verification, `code-reviewer` for code quality.
