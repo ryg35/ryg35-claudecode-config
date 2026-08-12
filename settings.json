@@ -154,7 +154,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/scripts/pre-tool-enforcer.sh"
+            "command": "~/.claude/scripts/pre-tool-enforcer-guard.sh"
           }
         ]
       }

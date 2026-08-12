@@ -68,7 +68,6 @@ Prior incidents (e.g. inventing a `docs/plan/` layout without reading planner co
 
 <question_batching>
 - 確認質問・AskUserQuestion は論点を溜めて1メッセージに最大4問までバッチして出す。1問ずつ逐次に投げない。
-- 出典: daily note 2026-07-03 / 2026-07-04 に同一指摘が2回出現。Burn Log 基準(2回目 = ルール昇格)により追加(2026-07-07)。
 </question_batching>
 
 <file_deletion>
@@ -80,7 +79,6 @@ Prior incidents (e.g. inventing a `docs/plan/` layout without reading planner co
 <public_release>
 - Deploying a NEW public-facing artifact for the first time (new site/LP deploy, minting a public URL, posting to SNS, sending anything outward) REQUIRES asking the user first. No exceptions, even when "publish today" is the stated goal; the goal authorizes building, not the moment of exposure.
 - User-instructed updates to something already public (fix redeploys, content corrections) do not require re-confirmation.
-- 出典: 2026-07-19、保険可視化LPを確認なしで初公開 → ユーザ指摘「初公開前は私に聞いて、事故を防ぎたい」。公開直前まで実名と無関係組織のメールが載っていた。
 </public_release>
 
 <implementation_steps>
@@ -94,6 +92,7 @@ Prior incidents (e.g. inventing a `docs/plan/` layout without reading planner co
 <execution_protocols>
 Operational rules adopted from OMC:
 
+- **Delegate-first (MANDATORY).** Before starting any substantive task, decide whether it can go to a non-Fable worker (Sonnet 5 xhigh agents; Opus/Codex for review) and announce the routing in one line. Fable quota is tight; Fable = judgment and orchestration only. See `~/.claude/rules/model-delegation.md`.
 - **Run 2+ independent tasks in parallel.** Do not serialize work that has no dependency between branches.
 - **Send long-running jobs to the background** (`run_in_background`) for builds, test suites, large greps. Continue other work while they run.
 - **Authoring and review are separate passes.** Do not self-approve in the same active context. Use the `critic` agent for design critique, `verifier` for evidence-based verification, `code-reviewer` for code quality.

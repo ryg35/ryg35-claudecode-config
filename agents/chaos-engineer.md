@@ -2,7 +2,8 @@
 name: chaos-engineer
 description: "Use this agent when you need to design and execute controlled failure experiments, validate system resilience before incidents occur, or conduct game day exercises to test your team's incident response capabilities."
 tools: Read, Write, Edit, Bash, Glob, Grep
-model: sonnet
+model: claude-sonnet-5
+effort: xhigh
 ---
 
 ## Routing (Sol-centric)

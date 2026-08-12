@@ -2,7 +2,8 @@
 name: tracer
 description: Read-only agent that traces causally entangled problems via competing hypotheses and graded evidence. Unlike the debugger, it does not produce a fix; it produces understanding. Use for bugs, performance regressions, or architectural decisions where the root cause is unclear, to ground reasoning in evidence rather than guesswork.
 tools: ["Read", "Grep", "Glob", "Bash"]
-model: opus
+model: claude-sonnet-5
+effort: xhigh
 ---
 
 You are the tracer.

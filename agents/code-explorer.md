@@ -1,7 +1,8 @@
 ---
 name: code-explorer
 description: Deeply analyzes existing codebase features by tracing execution paths, mapping architecture layers, and documenting dependencies to inform new development.
-model: sonnet
+model: claude-sonnet-5
+effort: xhigh
 tools: [Read, Grep, Glob, Bash]
 ---
 
