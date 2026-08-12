@@ -76,9 +76,17 @@ git log --grep='Directive:'           # commits with warnings for future modifie
 When creating PRs:
 1. Analyze full commit history (not just latest commit)
 2. Use `git diff [base-branch]...HEAD` to see all changes
-3. Draft comprehensive PR summary
+3. Draft full PR summary
 4. Include test plan with TODOs
 5. Push with `-u` flag if new branch
+
+**ALWAYS surface the PR URL.** Every time you create a PR, push to a PR
+branch, or resolve a PR's conflicts, the final message to the user MUST
+contain the full PR URL as a clickable link. No exceptions: "linked it
+earlier in the conversation" does not count — the user merges from the
+latest message, not from scrollback. Burn: 2026-08-12, user had to ask
+"URLくれ" before merging PR #31 because the link only appeared at creation
+time.
 
 ## Feature Implementation Workflow
 

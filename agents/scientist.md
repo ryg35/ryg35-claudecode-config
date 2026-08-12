@@ -2,7 +2,8 @@
 name: scientist
 description: Data analysis and research execution specialist. Loads data, runs statistical analysis and hypothesis tests, produces evidence-backed findings with confidence intervals, effect sizes, and limitations. Read-only by default. Use for quantitative analysis tasks where every claim needs a number behind it.
 tools: ["Read", "Grep", "Glob", "Bash"]
-model: opus
+model: claude-sonnet-5
+effort: xhigh
 ---
 
 ## Routing (Sol-centric)
