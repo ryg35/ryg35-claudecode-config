@@ -146,15 +146,22 @@ ehthumbs.db
 .last-cleanup
 image-cache/
 
-# === Local-only skills (contain machine-specific absolute paths) ===
-# vibe-learning は生成した教材の実物を参照実装として指しており、参照先が
-#   /Users/dev/ai-dev/ryogohosoi-explain/public/learn/<slug>/index.html
-#   ~/Documents/Obsidian Vault/03-learning/vibe-learning/
-# というこのホスト固有の絶対パスになっている。公開しても他の環境では
-# 解決できないため、このミラーには載せない。本体は private リポジトリ
-# (ryg35-claude-code) 側で管理する。
-# 手法そのものは note 記事と https://ryogohosoi.com/learn/ で公開している。
+# === Local-only skills (別リポジトリで配布 / 環境固有) ===
+# vibe-learning は専用の公開リポジトリ https://github.com/ryg35/vibe-learning で
+# 配布している。ここに置くと二重管理になるので載せない。
+# private 側の references/personal-setup.md には保存先や公開先の絶対パスが
+# 入っており、そもそも配布対象外。
 skills/vibe-learning
+
+# === Local-only scripts (この2リポジトリ構成に固有で、他環境では発火しない) ===
+# config-repo-order-guard.sh は「private を先に反映してから公開ミラーを触る」を
+# 強制するフック。対象のリポジトリ名がこの構成にハードコードされているため、
+# 同じ private + 公開ミラー構成を持たない人には一度も発火しない死んだフックになる。
+# しかも全 Bash 呼び出しの前に走るので、他人にとっては純粋なオーバーヘッド。
+# 環境変数で汎用化する案もあったが、設定しない限り誰も使わない機能を配ることに
+# なるため見送った。本体は private (ryg35-claude-code) 側で管理する。
+scripts/config-repo-order-guard.sh
+scripts/test-config-repo-order-guard.sh
 
 # === Paperclip-managed symlinks (machine-specific absolute paths) ===
 # paperclip CLI auto-creates these symlinks pointing to local agent-company
