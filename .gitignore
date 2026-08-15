@@ -146,6 +146,16 @@ ehthumbs.db
 .last-cleanup
 image-cache/
 
+# === Local-only skills (contain machine-specific absolute paths) ===
+# vibe-learning は生成した教材の実物を参照実装として指しており、参照先が
+#   /Users/dev/ai-dev/ryogohosoi-explain/public/learn/<slug>/index.html
+#   ~/Documents/Obsidian Vault/03-learning/vibe-learning/
+# というこのホスト固有の絶対パスになっている。公開しても他の環境では
+# 解決できないため、このミラーには載せない。本体は private リポジトリ
+# (ryg35-claude-code) 側で管理する。
+# 手法そのものは note 記事と https://ryogohosoi.com/learn/ で公開している。
+skills/vibe-learning
+
 # === Paperclip-managed symlinks (machine-specific absolute paths) ===
 # paperclip CLI auto-creates these symlinks pointing to local agent-company
 # checkouts and ~/.paperclip/instances/. They contain absolute paths that
