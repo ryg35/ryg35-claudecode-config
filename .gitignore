@@ -146,6 +146,11 @@ ehthumbs.db
 .last-cleanup
 image-cache/
 
+# === Local-only (別リポジトリで配布 / この構成に固有) ===
+skills/vibe-learning
+scripts/config-repo-order-guard.sh
+scripts/test-config-repo-order-guard.sh
+
 # === Paperclip-managed symlinks (machine-specific absolute paths) ===
 # paperclip CLI auto-creates these symlinks pointing to local agent-company
 # checkouts and ~/.paperclip/instances/. They contain absolute paths that
