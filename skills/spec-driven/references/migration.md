@@ -7,8 +7,7 @@
 **実測 (2026-08-17)**: `<dev-root>` 配下で `specs/` と `docs/plan/` の両方を持つリポジトリは **0件**。
 `specs/` を持つのは `chrome-extensions/repo-A` と `repo-B` の2つだけで、どちらも `docs/plan/` が無い。
 `docs/plan/` を持つ17箇所には `specs/` が無い。**つまり本当の二重化 (状況3) は現時点で該当ゼロ。**
-別枠で `docs/specs/*.md` を持つリポジトリが5つある (`agent-company` / `agent-company-plan2a-heartbeat-ttl` /
-`2b` / `2c` / `hackathon-agent`、中身はどれも `agent-config-ui.md` と `cliphub-plan.md` の2ファイル)。
+別枠で `docs/specs/*.md` を持つリポジトリが5つある (内部の実験リポ群。中身はどれも計画メモ2ファイルだけ)。
 `~/.claude/rules/directory-conventions.md` Rule 6 の置き場でも3点セットでもないので、状況1と同じ扱いにする。
 
 まず数える。該当しなければ何もしない。

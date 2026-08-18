@@ -26,7 +26,7 @@ time with GH007, forcing a full history rewrite (filter-branch) before the repo
 can go up. Do not write the private address itself in any file that may be
 committed (this rule file included).
 
-Burn: 2026-07-24 masq-mvp — 9 commits had to be rewritten before first push.
+Burn: 2026-07-24, a private repo — 9 commits had to be rewritten before first push.
 User has pointed this out multiple times across repos. Do not repeat.
 
 If commits with the private email already exist (unpushed only):
