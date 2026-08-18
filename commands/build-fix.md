@@ -1,38 +1,20 @@
 ---
-description: Iteratively run the build, group TypeScript/build errors by file, and fix them until the build is green.
+description: Delegate to the build-error-resolver agent to fix build and type errors with minimal diffs until the build is green.
 ---
 
-# Build and Fix
+# /build-fix
 
-Incrementally fix TypeScript and build errors:
+Thin wrapper. The fix workflow lives in `~/.claude/agents/build-error-resolver.md`
+(every error collected first, minimal diff each, build re-run after each fix).
 
-1. Run build: npm run build or pnpm build
+Call `Agent(subagent_type="build-error-resolver")` and hand it these escalation
+rules, which the agent definition does not carry:
 
-2. Parse error output:
-   - Group by file
-   - Sort by severity
+- TypeScript type errors: use the `typescript-reviewer` agent to find the root
+  cause before patching types, so the fix is not a cosmetic cast.
+- Library or framework errors: look up current docs with the
+  `documentation-lookup` skill (Context7) instead of guessing an API.
+- Same error surviving 3 attempts: stop and switch to the
+  `agent-introspection-debugging` skill. Still stuck after that, ask the user.
 
-2.5. **TypeScript Deep Analysis** (for TS type errors):
-   - Use the `typescript-reviewer` agent to identify the root cause of errors
-   - Understand the type design issue before fixing, rather than applying superficial type fixes
-
-3. For each error:
-   - Show error context (5 lines before/after)
-   - Explain the issue
-   - Propose fix
-   - Apply fix
-   - Re-run build
-   - For library-related errors, refer to the latest documentation using the `documentation-lookup` skill (Context7)
-   - Verify error resolved
-
-4. Stop if:
-   - Fix introduces new errors
-   - Same error persists after 3 attempts → enter self-debugging mode using the `agent-introspection-debugging` skill. If still unresolved, ask the user for guidance
-   - User requests pause
-
-5. Show summary:
-   - Errors fixed
-   - Errors remaining
-   - New errors introduced
-
-Fix one error at a time for safety!
+Report the agent's summary: errors fixed, errors left, new errors introduced.

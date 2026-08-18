@@ -3,7 +3,7 @@ name: repo-scaffolder
 description: Repository setup specialist. Works safely for both new and existing projects. Performs git init, GitHub repository creation, .gitignore generation, and directory structure completion.
 tools: ["Read", "Write", "Bash", "Grep", "Glob"]
 model: claude-sonnet-5
-effort: xhigh
+effort: high
 ---
 
 ## Routing (Sol-centric)

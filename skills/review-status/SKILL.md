@@ -1,6 +1,6 @@
 ---
 name: review-status
-description: Record and browse the review-run history. Appends one line to ~/.claude/memory/review-log.jsonl per run of pre-pr-review / review-prs / code-review and shows recent history. Prevents the "did I already review that PR?" problem.
+description: Record and browse the review-run history. Appends one line to ~/.claude/memory/review-log.jsonl per review run and shows recent history. Every entry point (pre-pr-review / review-prs / vibe, plus direct code-review skill invocation) runs the same implementation in skills/code-review, but each logs under its own name, so old lines stay greppable. Prevents the "did I already review that PR?" problem.
 user_invocable: true
 ---
 
@@ -35,7 +35,7 @@ tail -20 "$LOG" | jq -r '"\(.ts | sub("T";" ") | sub("Z";"")) | \(.skill) | \(.t
 ### Mode 2: Append a record (`log <skill> <target> [note]`)
 
 Call this right after finishing a review. Arguments:
-- `<skill>`: the skill that was run (pre-pr-review, review-prs, code-review, etc.)
+- `<skill>`: the entry point that was run. `pre-pr-review` / `review-prs` / `vibe` are the three commands; `code-review` means the skill was invoked directly. All of them execute `~/.claude/skills/code-review/SKILL.md`, but each logs its own name. Keeping the entry point (not one unified name) is deliberate: every line written before the merge stays greppable, and per-entry-point counts keep working. Note that `code-review` exists only as a skill and a log name now, not as a command, so old `code-review` lines are still valid history.
 - `<target>`: the target (PR number `PR#1185` / branch `branch:feature-x` / commit `sha:abc123`)
 - `[note]`: optional note (may be empty)
 
@@ -69,7 +69,7 @@ Examples:
 
 ## When to use
 
-- Right after finishing `/pre-pr-review` or a similar review, fire `/review-status log ...` once to record it
+- Step 8 of `~/.claude/skills/code-review/SKILL.md` already logs every run, including report-only ones. Fire `/review-status log ...` by hand only for reviews done outside that skill
 - Before running `/pre-pr-review PR#1185` next week, check `/review-status grep PR#1185` to see whether you already did it
 - At the start of the month, run `/review-status` to glance at how many reviews happened
 

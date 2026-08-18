@@ -74,14 +74,32 @@ write_meta() {
 
 write_meta "running" "$$"
 
-# Run in the foreground of THIS process. The caller is expected to launch
-# this whole script backgrounded (e.g. Bash tool's run_in_background) --
-# spawning a nested `&` job here was found to make the harness's sandboxed
-# shell exit 1 immediately (verified 2026-07-13: xtrace showed the script
-# dying right after `codex exec --json ... &`, before $! was even assigned).
+# The caller is expected to launch this whole script backgrounded (Bash tool's
+# run_in_background). Without that, the harness's 2-minute timeout SIGTERMs us.
+#
+# History: a nested `&` here used to make the harness's sandboxed shell exit 1
+# immediately (2026-07-13: xtrace showed the script dying right after
+# `codex exec --json ... &`, before $! was even assigned). Re-tested 2026-07-27
+# with the `& + wait` shape below and that no longer reproduces -- the wrapper
+# survives and codex runs normally. If the immediate exit-1 ever comes back,
+# this block is the first suspect.
 # Always detach stdin (see burn note above) even though we're foreground now.
+#
+# If we get killed before finishing (most commonly: the caller forgot
+# run_in_background and the harness's 2-minute Bash timeout SIGTERMs the
+# process group), record that instead of leaving the startup "running" behind.
+# Burn: 2026-07-27, two reviews died this way and `.meta` kept claiming
+# status=running for the rest of the session, so the death went unnoticed.
+# NOTE: the trap must not wait on a FOREGROUND child. bash only runs a trap
+# handler between commands, so with `codex exec` in the foreground the signal
+# sits queued until codex exits, and the handler never gets to run before the
+# kill. Start codex in the background and `wait` on it: `wait` IS interruptible
+# by a trap, which is the whole point of this shape.
+trap 'kill "$codex_pid" 2>/dev/null; write_meta "killed" "$$" "$(date +%s)"; exit 143' TERM INT HUP
 set +e
-codex exec --json "$@" > "$log_file" 2>&1 < /dev/null
+codex exec --json "$@" > "$log_file" 2>&1 < /dev/null &
+codex_pid=$!
+wait "$codex_pid"
 exit_code=$?
 set -e
 
@@ -90,6 +108,37 @@ if [ "$exit_code" -eq 0 ]; then
   write_meta "done" "$$" "$end_ts"
 else
   write_meta "error" "$$" "$end_ts"
+fi
+
+# --- Token usage を永続ディレクトリへ1行追記 ---
+# なぜ必要か: codex は通常 ~/.codex/sessions/ に rollout ログを残し、日報の
+# AI Usage 集計はそこを読む。しかし `--ephemeral` を付けたジョブは rollout を
+# 残さないため、消費が日報から丸ごと落ちる。
+# /review-prs と /pre-pr-review は Codex レビュー2本を必ず --ephemeral で呼ぶので
+# (review-prs.md:123,126 / pre-pr-review.md:128,131)、レビューを回すたびに漏れる。
+# 2026-08-16 実測: 51 ジョブ中 --ephemeral の 2 件が sessions に無く、
+# うち 1 件は input 7,201,604 tok を消費していた。
+# 消費値自体はこのジョブログの turn.completed に入っているので、ここで拾って
+# 永続化する。/tmp は再起動で消え、日報は翌朝に前日分を作るため、
+# /tmp に置いたままでは夜の再起動で証拠ごと消える。
+#
+# 既存の /tmp/claude-codex-jobs は statusline (codex-jobs-status.sh)、
+# codex-job-guard.sh、pre-tool-enforcer.sh が参照しているので動かさない。
+# ここは追記のみで、既存の経路には一切触らない。
+usage_dir="$HOME/.claude/codex-usage"
+mkdir -p "$usage_dir"
+usage_file="$usage_dir/$(date +%Y-%m-%d).jsonl"
+
+# 最後の turn.completed の usage を取る (セッション累積ではなくターン単位なので合算する)
+if [ -f "$log_file" ]; then
+  thread_id=$(grep -o '"thread_id":"[^"]*"' "$log_file" 2>/dev/null | head -1 | cut -d'"' -f4)
+  usage_json=$(grep -o '"usage":{[^}]*}' "$log_file" 2>/dev/null | tail -1 | sed 's/^"usage"://')
+  if [ -n "$usage_json" ]; then
+    # thread_id が空のジョブ (起動即エラー) も記録しておく。消費0でも
+    # 「呼んだが失敗した」事実が残るほうが、後から数を突き合わせやすい。
+    printf '{"job_id":"%s","thread_id":"%s","start_ts":%s,"end_ts":%s,"exit_code":%s,"usage":%s}\n' \
+      "$job_id" "${thread_id:-}" "$start_ts" "$end_ts" "$exit_code" "$usage_json" >> "$usage_file"
+  fi
 fi
 
 exit "$exit_code"

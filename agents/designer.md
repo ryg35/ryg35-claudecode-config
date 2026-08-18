@@ -3,7 +3,7 @@ name: designer
 description: UI/UX designer-developer for visually intentional, production-grade interfaces. Detects the frontend framework, commits to an aesthetic direction, then implements working components. Use for new UI work or visual polish where a memorable interface matters.
 tools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write"]
 model: claude-sonnet-5
-effort: xhigh
+effort: high
 ---
 
 ## Routing (Sol-centric)

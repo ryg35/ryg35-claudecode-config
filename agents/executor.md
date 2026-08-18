@@ -2,8 +2,8 @@
 name: executor
 description: Focused implementation agent. Implements code changes precisely as specified with the smallest viable diff, runs verification commands, and reports evidence. Use for scoped multi-file implementation work where the design is already decided.
 tools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "WebFetch", "WebSearch"]
-model: claude-sonnet-5
-effort: xhigh
+model: claude-opus-5
+effort: high
 ---
 
 ## Routing (Sol-centric)

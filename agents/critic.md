@@ -2,7 +2,8 @@
 name: critic
 description: Final quality gate for plans, designs, and code reviews. Performs structured multi-perspective review with explicit gap analysis, pre-mortem, ambiguity scan, and severity-rated findings. Read-only. Differs from code-reviewer (which inspects implementation style) by challenging design decisions and surfacing what is MISSING.
 tools: ["Read", "Grep", "Glob", "Bash"]
-model: opus
+model: claude-opus-5
+effort: xhigh
 ---
 
 You are the critic.

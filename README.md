@@ -109,7 +109,7 @@ Codexの独立reviewに晒される前提の緊張感を持って、自分の変
 ### `/review-prs` — 溜まったPRを捌く
 
 - オープンなPRを列挙し、順に review → 修正 → push を回す
-- 内部で `/code-review`(特化agent群) と `/build-fix` 等を呼び出す
+- 内部で `skills/code-review`(特化agent群) と `/build-fix` 等を呼び出す
 
 ### `/ralplan`: Planner→Architect→Critic の多視点合議で plan を詰める
 
@@ -149,13 +149,13 @@ Codexの独立reviewに晒される前提の緊張感を持って、自分の変
 |---------|------|
 | `/plan` | 実装計画のみを作る(vibeの外で計画だけ欲しい時、1 pass) |
 | `/codex-converge` | 単一docs(plan / ADR / RFC)を Codex 3本収束ループで磨く(連続2R P1=0で停止) |
-| `/tdd` | Red-Green-Refactor の実装のみ |
+| `/tdd` | Red-Green-Refactor の実装のみ(80%閾値を下回るファイルのcoverage sweep込み) |
 | `/fetch-pull` | mainの最新化だけ |
 | `/pr-create` | PR本文をcommit履歴から生成 |
-| `/update-docs` `/update-codemaps` | docs/ と codemap を実コードから同期 |
+| `/update-docs` | docs/ と codemap を実コードから同期(codemapを飛ばすなら `--skip-codemaps`) |
 | `/harness-audit` | このハーネス自体を `harness-optimizer` agentでscoring |
 | `/changelog` | conventional commitsから CHANGELOG.md を生成 |
-| `/dependency-check` `/conflict-check` `/smoke-test` `/test-coverage` | 単発の健全性チェック |
+| `/dependency-check` `/conflict-check` `/smoke-test` | 単発の健全性チェック |
 
 ### 代表的なagent
 

@@ -1,21 +1,29 @@
 # Performance Optimization
 
-## Model Selection Strategy (Claude 5 era, updated 2026-07-22)
+## Model Selection Strategy (Claude 5 era, updated 2026-08-14)
 
-Role split decided by user (Fable quota is tight; see `~/.claude/rules/model-delegation.md`):
+Role split decided by user (Fable quota is tight; see `~/.claude/rules/model-delegation.md`).
+The dominant latency lever is effort, not model (sonnet xhigh measured median:
+12.7 min/unit). For tiers that need more intelligence, raise the model and
+drop effort one step (opus high).
 
 **Fable (main session)** ... judgment only:
 - User dialogue, decisions, synthesis of subagent results
 - Orchestration (routing work, launching agents in parallel)
 - NEVER worker tasks that a subagent can do
 
-**Sonnet 5 + effort xhigh** ... default worker:
-- All implementation, exploration, planning drafts, docs, tests
-- Worker agents in `~/.claude/agents/` are pinned to `model: claude-sonnet-5` + `effort: xhigh`
+**Opus 5 + effort high** ... judgment-core workers:
+- tdd-guide / planner / architect / tracer / executor / error-detective
+- The tier where design judgment, causal reasoning, and implementation quality
+  decide the outcome. Smarter than sonnet xhigh and faster than xhigh.
 
-**Opus & Codex** ... reviewer tier:
-- code-reviewer / security-reviewer / critic / verifier / database-reviewer / typescript-reviewer / silent-failure-hunter run on Opus
+**Opus 5 + effort xhigh** ... reviewer tier (quality gate; slow is fine):
+- code-reviewer / security-reviewer / critic / verifier / database-reviewer / typescript-reviewer / silent-failure-hunter
 - Codex (`codex-exec-bg.sh`) for independent second opinions and executor-role default per `~/.claude/rules/agents.md`
+
+**Sonnet 5 + effort high** ... all remaining workers:
+- docs / scaffolding / exploration / CI generation: speed matters more than
+  reasoning depth
 
 **Haiku** ... trivial mechanical tasks only (rename sweeps, format-only passes)
 

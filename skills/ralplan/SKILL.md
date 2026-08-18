@@ -1,6 +1,6 @@
 ---
 name: ralplan
-description: "Consensus-planning shortcut. Invokes the plan skill in --consensus mode with RALPLAN-DR structured deliberation, and acts as a gate that auto-intercepts vague ralph/team/autopilot requests before they spin up heavy execution."
+description: "Consensus-planning shortcut. Invokes the plan skill in --consensus mode with RALPLAN-DR structured deliberation, and acts as a gate that auto-intercepts vague ralph/team requests before they spin up heavy execution. `autopilot` is deliberately NOT a gate keyword."
 user_invocable: true
 argument-hint: "[--interactive] [--deliberate] [--architect codex] [--critic codex] <task description>"
 ---
@@ -20,7 +20,7 @@ This is a thin wrapper. The actual planning behavior lives in the `plan` skill.
 ## Use when
 
 - The user says "ralplan", "consensus plan", or "deliberate plan".
-- The user fired off `ralph X` or `team X` or `autopilot X` where X is a vague verb with no file/function/issue reference.
+- The user fired off `ralph X` or `team X` where X is a vague verb with no file/function/issue reference.
 - The decision is hard to reverse (auth/security, schema migration, public API breakage, production incident).
 
 ## Do not use when
@@ -70,11 +70,13 @@ Ralplan is a planning module. It may inspect context and draft / update plan art
 
 ## Pre-execution gate
 
-The gate exists because execution modes (`ralph`, `team`, `autopilot`) spin up heavy multi-agent orchestration. Launched on a vague request, agents waste cycles on scope discovery instead of execution.
+The gate exists because execution modes (`ralph`, `team`) spin up heavy multi-agent orchestration. Launched on a vague request, agents waste cycles on scope discovery instead of execution.
 
 ### When the gate fires
 
-The gate fires when a prompt contains an execution keyword (`ralph`, `team`, `autopilot`) AND is too vague to act on. "Too vague" means: short (about 15 effective words or less) AND no concrete anchor.
+The gate fires when a prompt contains an execution keyword (`ralph`, `team`) AND is too vague to act on. "Too vague" means: short (about 15 effective words or less) AND no concrete anchor.
+
+`autopilot` was removed from the keyword list on 2026-08-17: it is a planning skill whose documented input is "a 1-2 sentence vague idea", so the gate fired on exactly the calls autopilot exists to serve, and it never launches heavy execution (it refuses to implement and hands off to `spec-driven` or `/vibe`). A vague idea with no anchor belongs in `autopilot`, not redirected here.
 
 ### Concrete anchors that auto-pass the gate
 
@@ -98,7 +100,7 @@ Any one of these is enough:
 
 ```
 1. Is the prompt prefixed with `force:` or `!`? → Pass.
-2. Does the prompt mention an execution keyword (ralph / team / autopilot)?
+2. Does the prompt mention an execution keyword (ralph / team)?
    - No → Not our concern. Skip.
    - Yes → Continue.
 3. Does the prompt contain any concrete anchor from the table above? → Pass.

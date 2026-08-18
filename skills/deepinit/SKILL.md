@@ -27,7 +27,7 @@ Create AGENTS.md in every meaningful directory of the codebase, linked into a na
 ## Relationship to existing tools
 
 - `init` command: writes the root `CLAUDE.md` file. Different artifact, complementary.
-- `update-codemaps` command: keeps an existing codemap fresh. Use after deepinit to maintain.
+- `update-docs` command: keeps existing docs and codemaps fresh. Use after deepinit to maintain.
 - `project-init` skill: full project bootstrap (repo setup, CI, docs). Deepinit is the per-directory AGENTS.md layer of that.
 
 ---

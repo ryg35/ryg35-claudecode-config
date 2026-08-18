@@ -1,5 +1,5 @@
 ---
-description: Enforce test-driven development workflow. Scaffold interfaces, generate tests FIRST, then implement minimal code to pass. Ensure 80%+ coverage.
+description: Enforce test-driven development workflow. Scaffold interfaces, generate tests FIRST, then implement minimal code to pass. Sweep the project for files under the 80% coverage threshold and fill the gaps.
 ---
 
 # TDD Command
@@ -299,6 +299,29 @@ Coverage: 100% ✅ (Target: 80%)
   - Security-critical code
   - Core business logic
 
+### Project-wide coverage sweep
+
+Step 8 above only proves the one file you just wrote is covered. Before calling
+the session done, sweep the whole project:
+
+```bash
+npm test -- --coverage   # or: pnpm test --coverage
+```
+
+1. Read `coverage/coverage-summary.json` and list every file below the 80% threshold
+2. For each under-covered file, read the untested paths and write the missing tests:
+   - unit tests for functions
+   - integration tests for API endpoints
+   - E2E tests for critical user flows
+3. Cover these four, in this order: happy path, error handling, edge cases (null / undefined / empty), boundary conditions
+4. Run the new tests and confirm they pass
+5. Report before/after coverage numbers, per file and project total
+6. Do not stop until the project total is 80%+
+
+When the under-covered code is error handling, launch the `silent-failure-hunter`
+agent on it. It tells you which error paths actually matter, so you write tests
+that catch real swallowed failures instead of counting percentage points.
+
 ## Important Notes
 
 **MANDATORY**: Tests must be written BEFORE implementation. The TDD cycle is:
@@ -315,8 +338,7 @@ After planning:
 - Use `/plan` first to understand what to build
 - Use `/tdd` to implement with tests
 - Use `/build-and-fix` if build errors occur
-- Use `/code-review` to review implementation
-- Use `/test-coverage` to verify coverage
+- Use `/pre-pr-review` to review implementation (it runs the `code-review` skill)
 
 ### Enhanced REFACTOR Phase
 
@@ -329,6 +351,7 @@ In the REFACTOR phase of the TDD cycle, leverage the following agents:
 With the `--eval` flag, TDD test results can also be output in eval-harness format:
 - Reuse TDD tests as eval definitions
 - Continuously measure agent quality with pass@k metrics
+- Record the coverage sweep numbers so regressions show up as a drop over time
 
 ## Related Agents
 

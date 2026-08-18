@@ -12,6 +12,32 @@ Types: feat, fix, refactor, docs, test, chore, perf, ci
 
 Note: Attribution disabled globally via ~/.claude/settings.json.
 
+## Author Email (GH007 prevention — MANDATORY)
+
+**Before the FIRST commit in any new repository**, set the GitHub noreply address:
+
+```bash
+git config user.email "207206215+ryg35@users.noreply.github.com"
+```
+
+Why: the user's GitHub account has email privacy protection ON. Commits authored
+with the private personal address (the global git default) are REJECTED at push
+time with GH007, forcing a full history rewrite (filter-branch) before the repo
+can go up. Do not write the private address itself in any file that may be
+committed (this rule file included).
+
+Burn: 2026-07-24 masq-mvp — 9 commits had to be rewritten before first push.
+User has pointed this out multiple times across repos. Do not repeat.
+
+If commits with the private email already exist (unpushed only):
+
+```bash
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter '
+export GIT_AUTHOR_EMAIL="207206215+ryg35@users.noreply.github.com"
+export GIT_COMMITTER_EMAIL="207206215+ryg35@users.noreply.github.com"
+' -- --all
+```
+
 ## Decision Trailers (for significant commits only)
 
 Attach structured trailers to commits that carry a design decision. Skip trailers for trivial commits (typo, formatting, mechanical rename).

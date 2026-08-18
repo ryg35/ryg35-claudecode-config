@@ -20,13 +20,13 @@ Optional flags (prepend before task description):
 
 ```
 GATE 1: Sync       → fetch-pull + conflict-check
-GATE 2: Plan       → reuse existing docs/plan/*.md (preferred) OR generate (fallback). User approval required.
+GATE 2: Plan       → reuse existing specs/<NNN>-<slug>/tasks.md (first) OR docs/plan/*.md (fallback) OR generate (last resort). User approval required.
 AUTO 3: Implement   → tdd
-AUTO 4: Review      → code-reviewer + security-reviewer + silent-failure-hunter + typescript-reviewer + code-simplifier + codex x2 (7 in parallel)
+AUTO 4: Review      → skills/code-review (6 Claude subagents + codex x2 in parallel, gates skipped in pipeline mode)
 AUTO 5: Verify      → verify → build-fix (if needed) → smoke-test
 AUTO 5.5: E2E       → e2e-runner (if UI/route changes detected)
 AUTO 6: Deps        → dependency-check (if new packages added)
-AUTO 7: Docs        → update-docs + update-codemaps (parallel)
+AUTO 7: Docs        → update-docs (docs + codemaps)
 GATE 8: Ship        → changelog + commit-push + pr-create (user approval required)
 ```
 
@@ -50,7 +50,7 @@ Phases:
   1. [GATE] Sync        - Fetch, pull, conflict check
   2. [GATE] Plan        - Reuse existing plan (preferred) or generate new
   3. [AUTO] Implement   - TDD: test → code → refactor
-  4. [AUTO] Review      - Code review + security review
+  4. [AUTO] Review      - skills/code-review: 6 subagents + codex x2
   5. [AUTO] Verify      - Build, types, lint, tests
   5.5 [AUTO] E2E        - Playwright journey tests (if UI/route changed)
   6. [AUTO] Deps        - Dependency audit (if applicable)
@@ -90,13 +90,18 @@ This phase is **plan-first (opt-in generation)**. `/vibe` assumes the user has a
 
 #### Step 2.1 — Discover existing plans
 
-1. **Explicit path takes precedence.** If `$ARGUMENTS` contains a path matching `docs/plan/**.md` (or any `*.md` path that exists), treat it as the chosen plan and jump to Step 2.3.
-2. Otherwise, scan `docs/plan/*.md` (top-level only — exclude `docs/plan/done/` archives and `_template-*.md` files).
-3. For each candidate, parse the frontmatter `status` field. Group as:
+**Discovery order: `specs/` first, `docs/plan/` second, generate last.** A repo running SPEC-driven work keeps its work list in `specs/<NNN>-<slug>/tasks.md` (see Rule 6 in `~/.claude/rules/directory-conventions.md`). Globbing only `docs/plan/*.md` makes vibe ignore that work list and generate a duplicate plan, silently.
+
+1. **Explicit path takes precedence.** If `$ARGUMENTS` contains a path matching `specs/*/tasks.md`, `specs/*/spec.md`, or `docs/plan/**.md` (or any `*.md` path that exists), treat it as the chosen source and jump to Step 2.3. A `specs/<NNN>-<slug>/` directory path counts too: its `tasks.md` is the source.
+2. **Scan `specs/*/tasks.md` and `specs/*/spec.md` first.** If any SPEC set exists, it wins over everything in `docs/plan/`. Read its status (see 2a below), apply the same grouping and selection order as steps 3-4 below, and treat the paired `tasks.md` as the work list. If several SPEC sets qualify, present them via `AskUserQuestion` (highest `<NNN>` first). Then jump to Step 2.3.
+
+2a. **Reading status from a SPEC set: frontmatter first, body line second.** Try `grep -m1 '^status:' spec.md`. SPEC sets written before the frontmatter convention have **no YAML frontmatter at all**; both sets that exist today (`chrome-extensions/repo-A/specs/001-side-preview-translation/`, `repo-B/specs/002-remote-mcp-and-cloudflare/`) start straight at `# spec.md ...`. For those, read the body line instead: `grep -m1 -E '^- (ステータス|状態):' spec.md`, and map its value onto the lifecycle (`確定` / `未着手` are pre-approval, treat as `backlog`; anything describing work underway is `in-progress`). If neither is present, treat the set as `backlog` and say so when presenting it, rather than skipping it silently. Never drop a SPEC set just because its status is unreadable: a skipped set makes vibe generate a duplicate plan, which is the exact failure this discovery order exists to prevent.
+3. Otherwise, scan `docs/plan/*.md` (top-level only, excluding `docs/plan/done/` archives and `_template-*.md` files).
+4. For each candidate, parse the frontmatter `status` field. Group as:
    - `active` (already approved, possibly mid-pipeline)
    - `backlog` (drafted but not yet approved)
    - other / no status (ignore)
-4. **Selection order** (active wins over backlog; within each group, newest `mtime` wins):
+5. **Selection order** (active wins over backlog; within each group, newest `mtime` wins):
    - If exactly one `active` plan → choose it.
    - Else if multiple `active` plans → present the list via `AskUserQuestion` and let the user pick.
    - Else if exactly one `backlog` plan → choose it.
@@ -105,7 +110,7 @@ This phase is **plan-first (opt-in generation)**. `/vibe` assumes the user has a
 
 #### Step 2.2 — Generate plan (fallback only)
 
-Only reached when Step 2.1 found nothing.
+Only reached when Step 2.1 found nothing, neither a SPEC set under `specs/` nor a plan under `docs/plan/`.
 
 1. Tell the user explicitly: `No existing plan found under docs/plan/. Generating a new one via planner. (Tip: run /plan first next time to keep vibe plan-first.)`
 2. **Load project context**: Glob for `docs/**/*.md` and `.claude/project-context.json`. Read what exists (requirements, architecture, tech-stack, api-spec, schema, previous plans). Pass all discovered context to the planner agent.
@@ -126,10 +131,12 @@ Only reached when Step 2.1 found nothing.
    - If `status: backlog` → flip frontmatter to `status: active` before continuing.
    - If `status: active` → leave as-is (already approved previously).
    - Record the chosen plan path as `$PLAN_FILE` for Phase 3 / Phase 8.
+   - **If the source is a SPEC set, `$PLAN_FILE` is `specs/<NNN>-<slug>/tasks.md`** (never `spec.md`, never `plan.md`). Phase 3 implements from `tasks.md`; `spec.md` supplies the FR / AS the tests must satisfy. Record the directory as `$SPEC_DIR` too.
+   - The status flip lives in `spec.md` frontmatter for a SPEC set, in the plan file frontmatter otherwise.
 
 ```
 Phase 2 COMPLETE: Plan approved
-  Source: [existing: docs/plan/<name>.md (status: active) | generated: docs/plan/<name>.md]
+  Source: [spec: specs/<NNN>-<slug>/tasks.md (status: active) | existing: docs/plan/<name>.md (status: active) | generated: docs/plan/<name>.md]
   Phases: X implementation steps
   Files:  Y files to modify
   Risk:   LOW/MEDIUM/HIGH
@@ -142,7 +149,8 @@ Phase 2 COMPLETE: Plan approved
 **Goal**: Implement the feature using TDD methodology.
 
 0. **Mark plan as in-progress**: If a plan file was approved in Phase 2, update its frontmatter from `status: active` to `status: in-progress` before invoking tdd-guide. Skip if no plan file exists.
-1. Invoke the **tdd-guide** agent with the approved plan
+1. Invoke the **tdd-guide** agent with the approved plan (`$PLAN_FILE`).
+   - For a SPEC set, pass the whole `$SPEC_DIR`: `tasks.md` is the work list, and each task's `完了条件` plus the `FR-00N` / `AS-N` it traces to in `spec.md` are the RED/GREEN criteria. See the Input Source section of `~/.claude/agents/tdd-guide.md`.
 2. For each implementation step:
    - Write failing tests (RED)
    - Implement minimal code (GREEN)
@@ -184,134 +192,38 @@ Phase 3 COMPLETE: Implementation
 
 ### Phase 4: Review [AUTO]
 
-**Goal**: Quality and security review of all changes.
+**Goal**: Quality and security review of everything Phase 3 implemented.
 
-**MUST: Launch all 4 agents below simultaneously. Do NOT skip or self-substitute any.**
+**MUST: read `~/.claude/skills/code-review/SKILL.md` and execute its Steps 0 to 8.**
+Do not launch review agents from this file. The launch block used to live here
+as a copy and drifted to 5 subagents while the real one had 6, so the reviewer
+that checks comments and annotations never ran inside `/vibe`. One
+implementation, no copies.
 
-Before launching, collect the changed files and diff to include in each prompt.
-Use `$BASE_BRANCH` determined in Phase 1:
-```bash
-git diff $BASE_BRANCH...HEAD --name-only
-git diff $BASE_BRANCH...HEAD
-```
+Parameters to pass in:
+- `mode=pipeline` ... **both gates are skipped.** `/vibe` is a pipeline; the user
+  gate is GATE 8 Ship. Do not call AskUserQuestion in Phase 4.
+- target = local diff against `$BASE_BRANCH` from Phase 1
+- fix scope = CRITICAL + HIGH auto-fixed (fixed policy for pipeline mode).
+  MEDIUM only when the fix is obvious, LOW noted and skipped.
+- `<entry-point>` for the skill's Step 8 logging = `vibe`
 
-##### Resilience Trigger Evaluation (Phase 4.0)
+Two rules from this file bind inside the skill run:
 
-Before launching the review agents, evaluate whether the resilience 3-pack (sre-engineer + chaos-engineer + error-detective) should be added to this phase.
-
-Set `RESILIENCE_TRIGGERED=true` if **any** of the following are true in the diff:
-
-| Condition | Rationale |
-|---|---|
-| Any file matches `migrations/**`, `**/migrations/**`, `supabase/migrations/**`, `prisma/migrations/**` | Schema changes have production-wide blast radius |
-| Any file matches `infra/**`, `terraform/**`, `k8s/**`, `kubernetes/**`, `helm/**`, `docker-compose*.yml`, `Dockerfile` | Infrastructure changes affect runtime reliability |
-| New files added under `**/api/**`, `**/app/api/**`, `supabase/functions/**`, `**/edge-functions/**` | New endpoints introduce new failure surfaces |
-| `package.json` diff includes runtime dependency additions for DB/queue/cache/auth packages (keywords: `prisma`, `drizzle`, `supabase`, `redis`, `bullmq`, `kafka`, `rabbitmq`, `mongodb`, `postgres`, `auth`, `next-auth`, `clerk`) | Runtime dependency changes alter failure modes |
-| Branch matches `hotfix/*`, `incident/*`, `postmortem/*` | Remediation work deserves resilience verification |
-| Total changed lines >= 500 | Large changes amplify blast radius |
-| Task description or commit trailer contains `production-impact` / `resilience-required` | Explicit signal from planner or author |
-
-Behavior:
-- `RESILIENCE_TRIGGERED=true` → **this is an AUTO phase**, so the pipeline prints the matched conditions and **runs the 3-pack automatically** together with Phases B + A. No user prompt (the pipeline's gate for user approval happens later at Phase 8 Ship).
-- `RESILIENCE_TRIGGERED=false` → skip the 3-pack; continue with the normal 7-agent (5 Claude + 2 Codex) review.
-
-When the 3-pack ran, compute a **Resilience Gate** (PASS / WARN / BLOCK) as defined at the end of this phase.
-
-##### Phase A: Launch Codex reviews as background Bash processes
-
-**Before launching Claude subagents, start 2 Codex reviews in background Bash, ALWAYS via `~/.claude/scripts/codex-exec-bg.sh` (raw `codex exec` is blocked by the pre-tool-enforcer hook).**
-
-**Important constraints:**
-- `codex exec review` **cannot use `--base <BRANCH>` together with `[PROMPT]`** (they are mutually exclusive). Use ONE of:
-  - `--base $BASE_BRANCH` alone (standard diff review)
-  - `[PROMPT]` alone (custom review; reference the base branch in the prompt text)
-- Output file names MUST be unique per invocation to avoid collision when multiple worktrees / parallel `/vibe` runs share `/tmp`. Use `$(git branch --show-current | tr / -)` and `$$` (PID) as suffix.
-- Do NOT swallow stderr with `2>/dev/null` — keep stderr so errors surface in task logs. `exit 2` from codex means the invocation failed (typically a flag combination error).
-
-```bash
-# Derive a unique suffix to avoid collision in parallel runs
-BRANCH_SLUG=$(git branch --show-current | tr / -)
-STD_OUT=/tmp/codex-review-standard-${BRANCH_SLUG}-$$.md
-ADV_OUT=/tmp/codex-review-adversarial-${BRANCH_SLUG}-$$.md
-
-# 1. Standard review (background) — uses --base only, no custom prompt
-Bash(command="~/.claude/scripts/codex-exec-bg.sh review --base $BASE_BRANCH --full-auto --ephemeral -o $STD_OUT", run_in_background=true)
-
-# 2. Adversarial review (background) — uses PROMPT only, references base branch in prompt text
-Bash(command="~/.claude/scripts/codex-exec-bg.sh review --full-auto --ephemeral -o $ADV_OUT 'Adversarial review of diff against $BASE_BRANCH: critically examine design decisions, trade-offs, failure modes, and security concerns'", run_in_background=true)
-```
-
-**Key flags:**
-- `--base $BASE_BRANCH`: review diff against the base branch (cannot be used together with PROMPT)
-- `--full-auto`: bypass Codex internal approval prompts (non-interactive mode)
-- `--ephemeral`: do not persist session files to disk
-- `-o <file>`: write review output to a file (Read it later)
-
-##### Phase B: Launch 5 Claude subagents in parallel (simultaneously with Phase A)
-
-1. `Agent(subagent_type="code-reviewer")` — Code quality review of changed files
-2. `Agent(subagent_type="security-reviewer")` — Security review of changed files
-3. `Agent(subagent_type="silent-failure-hunter")` — Detection of silent errors and swallowed exceptions
-4. `Agent(subagent_type="typescript-reviewer")` — TypeScript type safety and async correctness (only when TS/JS files are present)
-5. `Agent(subagent_type="code-simplifier")` — Code simplification and readability improvement suggestions
-
-##### Phase B2: Launch Resilience 3-pack (conditional — only when Phase 4.0 set RESILIENCE_TRIGGERED=true)
-
-Launch the following 3 agents in parallel in the **same single message as Phase B** (so all 8 Claude agents run concurrently). Skip this Phase B2 entirely when `RESILIENCE_TRIGGERED=false`.
-
-6. `Agent(subagent_type="sre-engineer")` — SLO / error-budget impact analysis, observability gaps (missing metrics, logs, traces), toil introduction
-7. `Agent(subagent_type="chaos-engineer")` — Failure mode enumeration, blast-radius assessment, rollback feasibility, feature-flag / kill-switch coverage
-8. `Agent(subagent_type="error-detective")` — Correlation with known error patterns, new failure-surface detection, past-incident similarity
-
-Each resilience-agent prompt MUST include:
-- The full diff (`git diff $BASE_BRANCH...HEAD`)
-- The list of trigger conditions that fired in Phase 4.0
-- A directive to return findings in the `CRITICAL / HIGH / MEDIUM / LOW` severity schema so they merge cleanly with Phase B output
-
-##### Phase C: Collect Codex results
-
-After all Claude subagents complete, read the Codex output files (use the same `$STD_OUT` / `$ADV_OUT` paths derived in Phase A):
-```
-Read($STD_OUT)   # e.g. /tmp/codex-review-standard-feat-foo-12345.md
-Read($ADV_OUT)   # e.g. /tmp/codex-review-adversarial-feat-foo-12345.md
-```
-
-If a file is empty or missing, the Codex review failed — log a warning but do not block the pipeline.
-If the background task exited with `exit 2`, it typically means a flag combination error; check the task stderr.
-
-Collect results from all agents and merge findings.
-- Standard review: 5 Claude subagents (Phase B) + 2 Codex reviews (Phase A) = **7 agents**
-- When `RESILIENCE_TRIGGERED=true`: additionally merge 3 resilience agents (Phase B2) = **10 agents total**
-
-Deduplicate overlapping issues and tag each with its source (code-reviewer / security-reviewer / silent-failure-hunter / typescript-reviewer / code-simplifier / codex:review / codex:adversarial-review / sre-engineer / chaos-engineer / error-detective).
-**Only report findings with Confidence >= 80.**
-
-**Auto-fix**:
-   - CRITICAL security issues → fix immediately
-   - HIGH code quality issues → fix immediately
-   - MEDIUM issues → fix if straightforward
-   - LOW issues → note but skip
-- If auto-fix introduces new issues, revert and flag for user
-- Re-run affected tests after fixes
-- **Test tampering prohibition (Phase 3 rules) fully applies here.** Auto-fix MUST NOT target test files to make failures go away. If a reviewer flags a "flaky test" or "overly strict assertion", surface the finding to the user — never silently weaken or skip the test.
-
-**Resilience Gate (only when Phase B2 ran):**
-- **PASS**: no CRITICAL and no HIGH resilience findings → continue pipeline
-- **WARN**: HIGH exists, no CRITICAL → continue, but surface the finding in the Phase 8 Ship summary for explicit user acknowledgement
-- **BLOCK**: any CRITICAL resilience finding → **pipeline STOPS at end of Phase 4**, require manual fix + re-run `/vibe from:review`. Do NOT proceed to Phase 5 Verify automatically.
+- **Test tampering prohibition (Phase 3) applies to auto-fix.** Fixes target
+  production code. Never edit, skip, or weaken a test to make a failure go away.
+  A "flaky test" or "overly strict assertion" finding gets surfaced, not silenced.
+- **Resilience Gate BLOCK stops the pipeline at the end of Phase 4.** Do not
+  advance to Phase 5. Report it, require a manual fix, resume with
+  `/vibe from:review`.
 
 ```
 Phase 4 COMPLETE: Review
   Resilience Review:    [RAN | SKIPPED (trigger not met)]
-  Code review:          X issues found, Y fixed
-  Security review:      X issues found, Y fixed
-  Codex review:         X issues found, Y fixed
-  Codex adversarial:    X issues found, Y fixed
-  SRE (if ran):         X issues found, Y fixed
-  Chaos (if ran):       X issues found, Y fixed
-  Error-detective:      X issues found, Y fixed
+  Findings:             X CRITICAL, Y HIGH, Z MEDIUM, W LOW
+  Fixed:                N (CRITICAL + HIGH)
   Resilience Gate:      [PASS | WARN | BLOCK | N/A]
-  Remaining:            Z (LOW priority, noted)
+  Remaining:            Z (MEDIUM / LOW, noted)
 ```
 
 **→ Compact context before next phase**
@@ -461,12 +373,9 @@ Phase 6 COMPLETE: Deps
 
 **Goal**: Keep documentation in sync with code changes.
 
-1. Launch **doc-updater** agent for:
-   - update-docs
-   - update-codemaps
-2. Run both in PARALLEL
-3. Only update docs that are affected by the changes
-4. Don't create new docs unless the project already has a docs structure
+1. Launch the **doc-updater** agent once for `update-docs`. It covers docs and codemaps in a single pass
+2. Only update docs that are affected by the changes
+3. Don't create new docs unless the project already has a docs structure
 
 ```
 Phase 7 COMPLETE: Docs
@@ -517,6 +426,7 @@ If Resilience Gate was `BLOCK`, the pipeline should NOT have reached here — Ph
      - `mkdir -p docs/plan/done`
      - Move: `git mv docs/plan/<name>.md docs/plan/done/<name>.md`
      - If the plan body diverged from the original approach, append a short `## Completion Notes` section describing what changed
+     - **If the source was a SPEC set**: flip `status: done` + `completed: YYYY-MM-DD` in `spec.md` frontmatter and leave `specs/<NNN>-<slug>/` exactly where it is. Do NOT `git mv` it into `docs/plan/done/`; the directory name is what pairs the spec with its branch.
      - If no plan file exists (e.g., `/vibe` was run without `/plan`), skip this archive step
    - Stage all changes (including the moved plan file)
    - Commit with approved message

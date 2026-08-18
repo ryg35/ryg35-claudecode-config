@@ -1,37 +1,32 @@
 ---
-description: Delegate to the doc-updater agent to sync docs from source of truth (package.json, .env.example, routes).
+description: Delegate to the doc-updater agent to sync docs and codemaps from source of truth (package.json, .env.example, routes, imports/exports). Pass --skip-codemaps for docs only.
+argument-hint: "[--skip-codemaps]"
 ---
 
 # Update Documentation
 
-This command delegates to the `doc-updater` agent (`~/.claude/agents/doc-updater.md`). The steps below are the agent's expected workflow.
+Thin wrapper. The full workflow lives in the `doc-updater` agent
+(`~/.claude/agents/doc-updater.md`). Read it and execute it.
 
-Sync documentation from source-of-truth:
+**Input**: $ARGUMENTS
 
-1. Read package.json scripts section
-   - Generate scripts reference table
-   - Include descriptions from comments
+## Docs (always)
 
-2. Read .env.example
-   - Extract all environment variables
-   - Document purpose and format
+1. `package.json` scripts to a scripts reference table
+2. `.env.example` to documented env vars (purpose and format)
+3. `docs/CONTRIB.md`: dev workflow, available scripts, environment setup, testing
+4. `docs/RUNBOOK.md`: deploy, monitoring and alerts, common failures, rollback
+5. List docs untouched for 90+ days for manual review, do not delete them
 
-3. Generate docs/CONTRIB.md with:
-   - Development workflow
-   - Available scripts
-   - Environment setup
-   - Testing procedures
+Source of truth is `package.json` and `.env.example`. Never hand-write what can be generated.
 
-4. Generate docs/RUNBOOK.md with:
-   - Deployment procedures
-   - Monitoring and alerts
-   - Common issues and fixes
-   - Rollback procedures
+## Codemaps (skipped when `--skip-codemaps` is passed)
 
-5. Identify obsolete documentation:
-   - Find docs not modified in 90+ days
-   - List for manual review
+6. Scan sources for imports, exports, dependencies
+7. Regenerate token-lean codemaps: `docs/codemaps/architecture.md`, `backend.md`, `frontend.md`, `data.md`
+8. Add a freshness timestamp to each, write the diff to `.reports/codemap-diff.txt`
+9. If a codemap changed more than 30%, ask the user before writing
 
-6. Show diff summary
+High-level structure only, not implementation details.
 
-Single source of truth: package.json and .env.example
+Finish with a diff summary.

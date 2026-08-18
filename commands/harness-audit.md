@@ -33,9 +33,9 @@ Each category scores 0–10; `repo` scope sums all seven (max 70). Scoped audits
 
 | # | Category | Signals checked |
 |---|---|---|
-| 1 | Tool Coverage | `commands/*.md` count, `agents/*.md` count, presence of core commands (`verify`, `code-review`, `pr-create`, `commit-push`, `plan`, `tdd`) |
+| 1 | Tool Coverage | `commands/*.md` count, `agents/*.md` count, presence of core commands (`verify`, `pre-pr-review`, `pr-create`, `commit-push`, `plan`, `tdd`) |
 | 2 | Context Efficiency | broken references (grep for slash-commands / agent names that no longer exist), overlap/duplicates, commands >400 lines, commands calling nonexistent scripts |
-| 3 | Quality Gates | presence of `verify`, `code-review`, `pre-pr-review`, `review-prs`, `e2e`, `smoke-test`, `test-coverage`, `security-review` |
+| 3 | Quality Gates | presence of `verify`, `pre-pr-review`, `review-prs`, `e2e`, `smoke-test`, `security-review` commands, the `skills/code-review/` skill (the single review path; there is no `code-review` command), and the coverage sweep inside `tdd` (absorbed from the old `test-coverage` command) |
 | 4 | Memory Persistence | `MEMORY.md` exists at root, `memory/` directory exists, index size <= 200 lines, entries follow the required frontmatter |
 | 5 | Eval Coverage | `skills/eval-harness/` present, `empirical-prompt-tuning` skill present, any `tests/` or `evals/` directory under root |
 | 6 | Security Guardrails | `rules/security.md` present, `security-review` skill/command present, `settings.json` `permissions.deny` includes risky commands (e.g. `curl`, `rm -rf`), hook entries in `settings.json` |

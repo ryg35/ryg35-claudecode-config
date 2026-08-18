@@ -1,8 +1,8 @@
 # Model Delegation (Delegate-first)
 
 The main session (Fable) is an **orchestrator, not a worker**.
-**Fable usage quota is tight.** Every token Fable spends on work a Sonnet 5
-(xhigh) subagent can do equally well burns scarce quota AND bloats the main
+**Fable usage quota is tight.** Every token Fable spends on work a subagent
+(Opus/Sonnet worker) can do equally well burns scarce quota AND bloats the main
 context until orchestration quality drops. Every time.
 
 ## Trigger (MANDATORY, before starting work)
@@ -67,10 +67,11 @@ arrives. Do not launch a worker and then let its result rot.
 
 | Work | Route |
 |---|---|
-| Implementation (design already decided) | executor agent (Codex/Sol first per `agents.md`; Claude fallback = sonnet xhigh) |
-| Codebase search / exploration | Explore or code-explorer (sonnet xhigh) |
-| Code review / security review / verification | code-reviewer / security-reviewer / verifier etc. (**opus**: reviewer tier) |
-| Docs, tests, refactoring, scaffolding, planning drafts | matching agent in `~/.claude/agents/` (sonnet xhigh) |
+| Implementation (design already decided) | executor agent (Codex/Sol first per `agents.md`; Claude fallback = **opus high**) |
+| Judgment-heavy workers (tdd-guide / planner / architect / tracer / error-detective) | **opus high** |
+| Codebase search / exploration | Explore or code-explorer (sonnet high) |
+| Code review / security review / verification | code-reviewer / security-reviewer / verifier etc. (**opus xhigh**: reviewer tier) |
+| Docs, tests, refactoring, scaffolding, planning drafts | matching agent in `~/.claude/agents/` (sonnet high) |
 | Research / external docs lookup | document-specialist / claude-code-guide |
 | Fact lookup where you already know the file+symbol | inline (delegation overhead > work) |
 | Tiny edits (~10 lines, single file, no design) | inline |
@@ -81,11 +82,17 @@ When 2+ delegable units exist, launch the agents **in parallel in one message**
 
 ## Mechanics
 
-- Agent frontmatter is pinned to `model: claude-sonnet-5` + `effort: xhigh`
-  (alias `sonnet` depends on runtime mapping; the pinned id does not).
+- Agent frontmatter uses pinned ids (`claude-opus-5` / `claude-sonnet-5`;
+  aliases depend on runtime mapping, pinned ids do not). Tiers as of 2026-08-14:
+  - 6 judgment-core workers (tdd-guide / planner / architect / tracer /
+    executor / error-detective) = `claude-opus-5` + `effort: high`
+    (smarter than sonnet xhigh AND faster than xhigh)
+  - 7 reviewers = `claude-opus-5` + `effort: xhigh` (quality gate; slow is fine)
+  - all remaining workers = `claude-sonnet-5` + `effort: high` (docs /
+    scaffolding / exploration need speed, not reasoning depth)
 - Reasoning effort CANNOT be overridden per Agent-tool call; it comes only from
   the agent definition frontmatter (or global `effortLevel` in settings.json).
-  So `Agent(<name>)` already runs at Sonnet 5 xhigh with no extra args.
+  So `Agent(<name>)` already runs at its pinned tier with no extra args.
 - Workflow tool `agent()` accepts `{model: 'sonnet', effort: 'xhigh'}` per call.
 - Codex (`codex-exec-bg.sh`) remains the default for executor-role work per
   `~/.claude/rules/agents.md`; this rule governs the Claude-side routing.

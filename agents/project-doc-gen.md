@@ -3,7 +3,7 @@ name: project-doc-gen
 description: Specialist agent for generating a complete set of project documents. Works safely for both new and existing projects. Follows the PROJECT-SEED.md template.
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 model: claude-sonnet-5
-effort: xhigh
+effort: high
 ---
 
 ## Routing (Sol-centric)

@@ -1,9 +1,9 @@
 ---
 name: doc-updater
-description: Documentation and codemap specialist. Use PROACTIVELY for updating codemaps and documentation. Runs /update-codemaps and /update-docs, generates docs/codemaps/*, updates READMEs and guides.
+description: Documentation and codemap specialist. Use PROACTIVELY for updating codemaps and documentation. Runs /update-docs (docs and codemaps in one pass, --skip-codemaps for docs only), generates docs/codemaps/*, updates READMEs and guides.
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 model: claude-sonnet-5
-effort: xhigh
+effort: high
 ---
 
 ## Routing (Sol-centric)

@@ -110,6 +110,7 @@ Collect evidence before claiming done. Do not output "done" without verification
 - Standard change ... unit tests + lint pass (sonnet tier).
 - Large change / security-sensitive ... unit + integration + adversarial review (opus tier, with `security-reviewer` spawned).
 - For long-running or interactive execution modes (multi-step parallel work, persistent loops, full pipeline), see skills under `~/.claude/skills/` (ralph / team / ultrawork / ultraqa / vibe).
+- **Backup / sync / ignore-pattern work ... count the receiving side.** A tool's "synced" message is not evidence. Never move, delete, or untrack the original before the count or hash matches. See `~/.claude/rules/backup-verification.md` (burned twice on 2026-08-16: 533 images silently excluded by `.gitignore`, and Google Drive reporting "up to date" with 0 bytes actually uploaded).
 
 If verification fails, fix and retry. "It mostly works, so OK" is forbidden.
 </verification>

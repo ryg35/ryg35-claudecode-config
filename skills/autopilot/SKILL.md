@@ -1,6 +1,6 @@
 ---
 name: autopilot
-description: "Take a 1-2 sentence vague idea through requirements, prior-art research, and implementation plan in one flow. Sparring-partner skill for the 'haven't decided what to build yet' stage. Implementation itself is handed off to /vibe. Vague autopilot/ralph/team requests get intercepted by /ralplan first."
+description: "Take a 1-2 sentence vague idea through requirements, prior-art research, and implementation plan in one flow. Sparring-partner skill for the 'haven't decided what to build yet' stage. Autopilot decides WHAT to build; the spec-driven skill pins down HOW it is specified; /vibe implements. Hands off to spec-driven (work big enough to need a spec) or /vibe (work small enough to skip one)."
 user_invocable: true
 argument-hint: "[<vague idea>]"
 ---
@@ -9,7 +9,7 @@ argument-hint: "[<vague idea>]"
 
 ## Purpose
 
-Take a vague idea ("I want something like ..." level) and produce **an approved requirements doc + implementation plan**. Acts as a sparring partner. **Implementation is delegated to `/vibe`**. Autopilot is the idea-to-plan entry; vibe is the plan-to-PR exit.
+Take a vague idea ("I want something like ..." level) and produce **an approved requirements doc + implementation plan**. Acts as a sparring partner. **Implementation is delegated: `spec-driven` for work big enough to need a spec, `/vibe` for work small enough to skip one.** Autopilot is the idea-to-plan entry; vibe is the plan-to-PR exit.
 
 ## Boundary with vibe
 
@@ -20,8 +20,12 @@ Take a vague idea ("I want something like ..." level) and produce **an approved 
 | Phases | Sparring -> requirements -> plan | Plan -> implementation -> PR |
 | Mode | Interactive with user | Mostly autonomous |
 
-When autopilot finishes, it asks "should we run `/vibe` next?" at the exit.
+When autopilot finishes, it asks which handoff to take at the exit (Phase 4).
 This skill solves "haven't decided what to build". `/vibe` handles "how to build it".
+
+## Boundary with spec-driven
+
+**Autopilot is the "we have not decided what to build yet" stage; `spec-driven` is the "the thing is decided, now freeze the spec" stage.** Autopilot converges an idea into requirements; spec-driven turns those requirements into `specs/<NNN>-<slug>/spec.md` + `plan.md` + `tasks.md` and freezes them for implementation.
 
 ## Use when
 
@@ -55,7 +59,7 @@ Three phases ahead:
   Phase 3. Implementation plan (planner produces a plan file)
 
 I will pause for confirmation after each phase. Say "stop" any time to halt.
-I will NOT implement. That belongs to /vibe.
+I will NOT implement. That belongs to spec-driven (spec first) or /vibe.
 ```
 
 ---
@@ -160,6 +164,8 @@ planner follows `~/.claude/agents/planner.md` and produces:
 - `docs/plan/<verb>-<topic>.md` (frontmatter `status: backlog`)
 - A `## Self-Critic` section at the bottom (mandated by planner.md)
 
+If the work is clearly spec-scale (several files / a new feature / acceptance criteria still fuzzy), **skip this planner pass** and let `spec-driven` write `specs/<NNN>-<slug>/plan.md` instead. Two plans for the same work is forbidden by Rule 6 in `~/.claude/rules/directory-conventions.md`.
+
 Instruction to planner:
 ```
 Follow ~/.claude/agents/planner.md strictly.
@@ -183,16 +189,23 @@ Phase 3 complete. Plan: <path>
 | Rollback path | <summary> |
 
 Approve?
-  [Approve, hand off to /vibe] (flip plan status to active and suggest /vibe)
+  [Approve, go to the Phase 4 handoff] (flip plan status to active, then pick spec-driven or /vibe)
   [Revise plan] (return feedback to planner)
   [Stop here] (keep plan as backlog, end the skill)
 ```
 
 ---
 
-## Phase 4: Bridge to vibe (implementation NOT included)
+## Phase 4: Bridge to spec-driven or vibe (implementation NOT included)
 
-Once the user approves in Phase 3, autopilot **terminates**.
+Once the user approves in Phase 3, autopilot **terminates**. Pick the handoff by size:
+
+| Handoff | When |
+|---|---|
+| `spec-driven` skill | Several files, a new feature, or acceptance criteria still fuzzy. It produces `specs/<NNN>-<slug>/spec.md` + `plan.md` + `tasks.md`. |
+| `/vibe <slug>` | One file, an obvious change, requirements already sharp. No spec is written. |
+
+**`docs/requirements/<slug>.md` from Phase 1 is the draft of `spec.md`.** Hand the path to spec-driven as-is. The User Stories, acceptance criteria, and open questions carry over; do not restart the interview from a blank page and do not throw the file away.
 
 Final output:
 
@@ -200,13 +213,13 @@ Final output:
 Autopilot finished.
 
 Artifacts:
-- Requirements: docs/requirements/<slug>.md
+- Requirements: docs/requirements/<slug>.md  (draft for spec.md)
 - Research: docs/research/<slug>.md
-- Plan: docs/plan/<slug>.md (status: active)
+- Plan: docs/plan/<slug>.md (status: active)   (omitted if the planner pass was skipped for spec-driven)
 
-To implement, run:
-
-  /vibe <slug>
+Next, pick one:
+  spec-driven   turns the requirements doc into specs/<NNN>-<slug>/spec.md + plan.md + tasks.md
+  /vibe <slug>  goes straight to implementation from the plan above
 
 Or manually:
   - Re-read the Self-Critic section in the plan
@@ -214,13 +227,13 @@ Or manually:
   - Begin implementation
 ```
 
-**Autopilot must not invoke any implementation skill.** Stop until the user runs `/vibe` (or any other implementation flow) explicitly. This is User Sovereignty in action. Despite the name, autopilot is autonomous up to the plan and human-triggered at implementation.
+**Autopilot must not invoke any implementation skill.** Stop until the user runs `spec-driven`, `/vibe`, or another implementation flow explicitly. This is User Sovereignty in action. Despite the name, autopilot is autonomous up to the plan and human-triggered at implementation.
 
 ---
 
 ## What you must not do
 
-- **Advance into implementation.** Autopilot ends at the plan; implementation belongs to vibe.
+- **Advance into implementation.** Autopilot ends at the plan; the spec belongs to `spec-driven` and the implementation belongs to vibe.
 - **Skip the per-phase user confirmation.** Always stop at the end of each phase.
 - **Skip deep-interview or planner with "just implement it".** That violates ETHOS "Boil the lake".
 - **Ignore an existing solution found in Phase 2 and still plan a new implementation.** Search-before-building violation.
