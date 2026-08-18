@@ -19,5 +19,5 @@ case "$CMD" in *public-config*) exit 0 ;; esac
 case "$CMD" in *"/.claude"*|*"cd ~/.claude"*|*"-C ~/.claude"*) ;; *) exit 0 ;; esac
 
 echo "~/.claude に commit が入った。公開側 (ryg35-claudecode-config) へ反映するかをユーザーに確認すること。"
-echo "反映する場合: 恒久の場所に clone → python3 ~/.claude/scripts/export-public-config.py --public-repo <clone> → diff をユーザーが確認 → ユーザー自身が push。push を代行しない。"
+echo "反映する場合: export-public-config.py を実行 → diff をユーザーが確認 → ブランチを切って PR を作る。main は保護済みで直 push は通らない。マージはユーザーが行う。"
 exit 0
