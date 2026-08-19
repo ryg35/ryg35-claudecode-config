@@ -164,7 +164,7 @@ Authoring the `spec-driven` skill, I read this line at the top of a real `spec.m
 
 > ステータス: 確定 (このファイルは実装中に変更しない...)
 
-and turned it into an absolute rule: "the body is never rewritten". One `git show e601a3c`
+and turned it into an absolute rule: "the body is never rewritten". One `git show <the-commit>`
 would have shown the body line being **deleted and replaced**. The declared policy and the
 practiced policy were different, and the practiced one was the correct one. The skill shipped
 with a rule its own source of truth violates.

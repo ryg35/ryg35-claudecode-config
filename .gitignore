@@ -152,7 +152,7 @@ scripts/config-repo-order-guard.sh
 scripts/test-config-repo-order-guard.sh
 
 # === Paperclip-managed symlinks (machine-specific absolute paths) ===
-# paperclip CLI auto-creates these symlinks pointing to local agent-company
+# paperclip CLI auto-creates these symlinks pointing to local project
 # checkouts and ~/.paperclip/instances/. They contain absolute paths that
 # only resolve on the host where they were generated, so they must not be
 # committed to the shared dotfiles repo.
