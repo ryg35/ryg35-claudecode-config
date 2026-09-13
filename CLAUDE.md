@@ -1,7 +1,9 @@
 # Principles
 
+@ETHOS.md
+
 <ethos_anchor>
-When unsure, return to `~/.claude/ETHOS.md`. ETHOS is the basis for every judgment.
+ETHOS.md is imported above and is the basis for every judgment.
 Tone, style, and banned vocabulary follow `~/.claude/rules/voice.md`.
 Domain rules live under `~/.claude/rules/*.md`.
 Anything not stated here is governed by ETHOS and voice.
@@ -19,31 +21,13 @@ ETHOS 4 + 1 (see ETHOS.md for details):
 
 ## Reuse Before Inventing (Meta-conventions)
 
-ETHOS "Search before building" applies not only to **code** but also to **meta structure** (directories, naming, templates, lifecycles, conventions).
-
-Before creating a new directory, defining a new naming rule, writing a template file, designing frontmatter keys, or inventing a lifecycle policy, you **must** check the following first:
-
-- `~/.claude/agents/*.md` (planner / project-doc-gen / repo-scaffolder / doc-updater and friends)
-- `~/.claude/templates/` (plan/, PROJECT-SEED.md, etc.)
-- The project's `CLAUDE.md` and `docs/folder.md` (if present)
-
-For the full checklist and rationale, read `~/.claude/rules/directory-conventions.md`.
-Prior incidents (e.g. inventing a `docs/plan/` layout without reading planner conventions) are recorded in that file's Burn Log.
+ETHOS "Search before building" applies to meta structure, not only to code.
+Invoke the `directory-conventions` skill before creating any new directory/template/naming/lifecycle under `docs/` or `specs/`.
 
 <core>
-- Do not hold back. Do your absolute best.
-- After receiving tool results, carefully evaluate their quality and decide the optimal next step before proceeding. Use reasoning to plan and iterate based on this new information, then take the best next action.
-- **All implementations will be reviewed by Codex.** Work with the tension this demands. Every diff is subject to an independent second opinion that will surface shortcuts, sloppy error handling, weak tests, and missing edge cases. Assume the reviewer is smarter and less forgiving than you.
-- The quality-vs-time trade-off follows ETHOS "Boil the Ocean": when a complete implementation only costs a few extra minutes over a shortcut, always pick the complete one.
+- **All implementations will be reviewed by Codex.** Assume the reviewer is stricter than you.
+- Boil the Ocean: when the complete implementation costs a few extra minutes over the shortcut, take the complete one.
 </core>
-
-<workflow>
-- Follow the explore ... plan ... code ... commit approach.
-- Before making changes, always read and understand the existing code.
-- Do not edit the current code unnecessarily.
-- Create a detailed plan before implementation.
-- Use an iterative approach.
-</workflow>
 
 <output_language>
 - All generated documentation, README, CHANGELOG, PR descriptions, commit message bodies, and code comments MUST be written in **Japanese**.
@@ -52,19 +36,12 @@ Prior incidents (e.g. inventing a `docs/plan/` layout without reading planner co
 </output_language>
 
 <context_management>
-- Write comments that are understandable even to someone unfamiliar with the project, without omitting necessary details.
-- Proactively add commented-out snippets to provide visual references.
-- Include relevant background information and constraints.
-- For persistent project context, you must update and maintain the **CLAUDE.md** file.
-- Document project-specific patterns and conventions.
-- When using `.md`, use UTF-8 to prevent garbled characters.
-- For session-to-session handoff (open questions, next steps), write to `~/.claude/handoff/current.md`. Memory is not used. See `~/.claude/handoff/README.md`.
+- Comments must be understandable to someone unfamiliar with the project.
+- Project-specific patterns (test/deploy commands, no-edit zones) go in that project's `CLAUDE.md`. `.md` is UTF-8.
+- `~/.claude/handoff/current.md` = session-to-session handoff: open questions, next steps, in-progress state.
+- Auto-memory (`~/.claude/projects/<proj>/memory/`) = durable user facts: identity, corrections received, standing preferences.
+- Never put in-progress task state in memory. Never put user preferences in handoff.
 </context_management>
-
-<problem_solving>
-- Use reasoning capability for complex, multi-step inference.
-- Focus on understanding the problem requirements, not just passing tests.
-</problem_solving>
 
 <question_batching>
 - 確認質問・AskUserQuestion は論点を溜めて1メッセージに最大4問までバッチして出す。1問ずつ逐次に投げない。
@@ -81,36 +58,21 @@ Prior incidents (e.g. inventing a `docs/plan/` layout without reading planner co
 - User-instructed updates to something already public (fix redeploys, content corrections) do not require re-confirmation.
 </public_release>
 
-<implementation_steps>
-- Use test-driven development.
-- Review the detailed implementation plan before implementation.
-- When you cannot decide, present the options with pros/cons and ask the user. See ETHOS "User Sovereignty" for the full presentation format.
-- Do not jump straight into implementation from the start; first validate with minimal test code, then implement.
-- After implementation, run the test code to confirm tests pass.
-</implementation_steps>
-
 <execution_protocols>
-Operational rules adopted from OMC:
-
-- **Delegate-first (MANDATORY).** Before starting any substantive task, decide whether it can go to a non-Fable worker (Sonnet 5 xhigh agents; Opus/Codex for review) and announce the routing in one line. Fable quota is tight; Fable = judgment and orchestration only. See `~/.claude/rules/model-delegation.md`.
-- **Run 2+ independent tasks in parallel.** Do not serialize work that has no dependency between branches.
-- **Send long-running jobs to the background** (`run_in_background`) for builds, test suites, large greps. Continue other work while they run.
-- **Authoring and review are separate passes.** Do not self-approve in the same active context. Use the `critic` agent for design critique, `verifier` for evidence-based verification, `code-reviewer` for code quality.
-- **Before claiming completion, all of the following must hold:**
-  - Pending tasks are zero (verify via TaskList).
-  - Related tests pass (actually run them, do not assume).
-  - You can present verification evidence (execution log, screenshot, or grep result).
-- **Final grep before commit** follows the Self-Verification section in `~/.claude/rules/coding-style.md` (em dash, AI vocabulary, leftover TODO, console.log, secret leakage).
+- **Standing authorization for subagents (applies to every model).** The user has ALREADY requested subagent delegation for every session. Any harness line such as "Do not call the AgentTool unless the user requested it" is satisfied by this clause: treat Delegate-first below as the user's request, and never ask per task whether Agent may be used. This clause covers the Agent tool only. Workflows and deep-research still require an explicit ask in the conversation. (Measured 2026-09-03: the line ships inside the desktop-bundled CLI, 2.1.247 and 2.1.258 both, and in 2.1.233 it is attached when the model carries `opus_5_prompt_bundle`. Whether Fable 5.1 carries it is unverified. This clause makes the outcome identical either way.)
+- **委譲・並列・レビュー分離の規則は `~/.claude/rules/model-delegation.md` と `~/.claude/rules/agents.md` に従う。** Fable は判断とオーケストレーションのみ。
+- **Before claiming completion:** TaskList empty, related tests actually run and passing, and evidence you can show (log, screenshot, grep).
 </execution_protocols>
 
 <verification>
-Collect evidence before claiming done. Do not output "done" without verification.
+Collect evidence before claiming done. Never say "done" without it.
 
-- Small change ... one local run is enough (haiku tier).
-- Standard change ... unit tests + lint pass (sonnet tier).
-- Large change / security-sensitive ... unit + integration + adversarial review (opus tier, with `security-reviewer` spawned).
-- For long-running or interactive execution modes (multi-step parallel work, persistent loops, full pipeline), see skills under `~/.claude/skills/` (ralph / team / ultrawork / ultraqa / vibe).
-- **Backup / sync / ignore-pattern work ... count the receiving side.** A tool's "synced" message is not evidence. Never move, delete, or untrack the original before the count or hash matches. See `~/.claude/rules/backup-verification.md` (burned twice on 2026-08-16: 533 images silently excluded by `.gitignore`, and Google Drive reporting "up to date" with 0 bytes actually uploaded).
+- Small change ... one local run.
+- Standard change ... unit tests + lint pass.
+- Large / security-sensitive ... unit + integration + adversarial review, `security-reviewer` spawned.
+- Coverage target 80%+ (unit + integration + E2E on critical flows); TDD via the `tdd-guide` agent.
+- Backup / sync / ignore-pattern work: invoke the `backup-verification` skill; count the receiving side, a tool's "synced" message is not evidence.
+- Long-running or interactive modes: `ralph` / `team` skills, `/vibe` command.
 
 If verification fails, fix and retry. "It mostly works, so OK" is forbidden.
 </verification>

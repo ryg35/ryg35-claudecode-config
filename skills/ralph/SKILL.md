@@ -1,9 +1,11 @@
 ---
 name: ralph
-description: PRD-driven persistence loop that keeps working until every user story passes a reviewer, with handoff files so the next session can resume cleanly. Not for one-shot full pipelines (use /vibe) or pure QA cycling (use ultraqa).
+description: PRD-driven persistence loop that keeps working until every user story passes a reviewer, with handoff files so the next session can resume cleanly. Not for one-shot full pipelines (use /vibe) or pure QA cycling (read skills/ralph/references/ultraqa/SKILL.md).
 user_invocable: true
 argument-hint: "[--no-deslop] [--critic=architect|critic|codex] <task description>"
 ---
+> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/`、omc-teams / sciomc は `skills/team/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
+
 
 # Ralph Skill (/ralph)
 
@@ -286,3 +288,10 @@ Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-writ
 > "Implementation looks correct, tests should pass. Done."
 
 No fresh test run, no story verification, no reviewer. This is exactly what ralph exists to prevent.
+
+## 参照モード (references/ に統合したスキル)
+
+| 読む先 | いつ |
+|---|---|
+| `references/ultrawork/SKILL.md` | 永続ループなしで、分解済みタスクを並列実装だけしたいとき |
+| `references/ultraqa/SKILL.md` | 実装は終わっていて、QA サイクル (test → fix → retest) だけ回したいとき |

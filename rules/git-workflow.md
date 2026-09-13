@@ -2,34 +2,26 @@
 
 ## Commit Message Format
 
-```
-<type>: <description>
-
-<optional body>
-```
-
+`<type>: <description>` + blank line + optional body.
 Types: feat, fix, refactor, docs, test, chore, perf, ci
 
-Note: Attribution disabled globally via ~/.claude/settings.json.
+Commit trailer `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` is added
+by the harness; do not add other attribution.
 
-## Author Email (GH007 prevention — MANDATORY)
+## Author Email (GH007 prevention, MANDATORY)
 
-**Before the FIRST commit in any new repository**, set the GitHub noreply address:
+**Before the FIRST commit in any new repository:**
 
 ```bash
 git config user.email "207206215+ryg35@users.noreply.github.com"
 ```
 
-Why: the user's GitHub account has email privacy protection ON. Commits authored
-with the private personal address (the global git default) are REJECTED at push
-time with GH007, forcing a full history rewrite (filter-branch) before the repo
-can go up. Do not write the private address itself in any file that may be
-committed (this rule file included).
+Email privacy protection is ON: commits with the private personal address (git's
+global default) are REJECTED at push with GH007 and the history must be rewritten.
+Never write that address into a committable file, this one included.
+Burn: 2026-07-24, a private repo needed 9 commits rewritten before first push.
 
-Burn: 2026-07-24, a private repo — 9 commits had to be rewritten before first push.
-User has pointed this out multiple times across repos. Do not repeat.
-
-If commits with the private email already exist (unpushed only):
+Fix for unpushed commits that already carry the private email:
 
 ```bash
 FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter '
@@ -38,101 +30,54 @@ export GIT_COMMITTER_EMAIL="207206215+ryg35@users.noreply.github.com"
 ' -- --all
 ```
 
-## Decision Trailers (for significant commits only)
+## Decision Trailers (design-carrying commits only)
 
-Attach structured trailers to commits that carry a design decision. Skip trailers for trivial commits (typo, formatting, mechanical rename).
-
-Selection rule: would your future self, reading this commit in 3 months via `git log`, need to recall why this was done? If yes, attach trailers.
-
-### Trailer list
+Attach when your future self, reading `git log` in 3 months, needs to recall why.
+Skip for typo / formatting / mechanical rename.
 
 - `Constraint:` constraint that bounded the decision (technical, policy, time)
 - `Rejected:` alternative considered | reason for rejection
 - `Directive:` warning or instruction for future modifiers of this code
-- `Confidence:` high | medium | low (confidence in correctness)
+- `Confidence:` high | medium | low
 - `Scope-risk:` narrow | moderate | broad (blast radius)
 - `Not-tested:` edge case or scenario not covered by tests
 
-Each trailer is optional. Include only the ones that apply.
-
-### Format
-
-Place trailers at the **end** of the commit body, separated from the prose by one blank line. Use HEREDOC:
+Place at the **end** of the body, one blank line after the prose:
 
 ```bash
 git commit -m "$(cat <<'EOF'
 fix(auth): prevent silent session drops during long-running ops
 
-Auth service returns inconsistent status codes on token expiry,
-so the interceptor catches all 4xx and triggers inline refresh.
+Auth returns inconsistent codes on token expiry, so the interceptor catches all 4xx.
 
 Constraint: Auth service does not support token introspection
 Rejected: Extend token TTL to 24h | security policy violation
-Confidence: high
-Scope-risk: narrow
-Directive: Catching all 4xx is intentional; do not narrow without verifying upstream behavior
-Not-tested: Auth service cold-start latency >500ms
+Directive: Catching all 4xx is intentional; do not narrow without verifying upstream
 EOF
 )"
 ```
 
-### Burn-related commits must carry a Directive:
+**Burn-related commits must carry a `Directive:`.** 1st fix of a bug: a `Directive:`
+saying do not step on this rake again. 2nd time it nearly returns: promote to a rule,
+and that commit carries a `Directive:` too.
 
-This aligns with the Burn Log concept in `~/.claude/rules/coding-style.md`:
+## Push は実行しない。コマンドを渡す
 
-- **First** time you fix a given bug: leave a `Directive:` saying "do not step on this rake again".
-- **Second** time the same bug nearly returns: promote it to a rule (and the rule-promotion commit also carries a `Directive:`).
-
-Example:
-```
-Directive: This path traversal guard must be realpath-based, otherwise it can be bypassed.
-A startswith()-only guard was bypassed in production on 2025-11-12.
-```
-
-### Searching the log
+**`git push` は AI が実行しない。** 実行するコマンドを1行で渡す。リモートとブランチを必ず書く。
 
 ```bash
-git log --grep='Confidence: low'      # commits where uncertainty remained
-git log --grep='Rejected:' --oneline  # commits carrying explicit design decisions
-git log --grep='Directive:'           # commits with warnings for future modifiers
+cd <repo> && git push origin <branch>
 ```
+
+初回は `git push -u origin <branch>`。素の `git push` は渡さない。外に出す操作は利用者が引く
+（同形: `rm` / `git rm` / `gh pr merge`）。
+burn 2026-08-31: f1-weather PR #62 で `git push` を実行しようとして拒否された。
+burn 2026-09-05 (2回目、規則に昇格): PR #66 で素の `git push` を渡し「明示的に」と指摘された。
 
 ## Pull Request Workflow
 
-When creating PRs:
-1. Analyze full commit history (not just latest commit)
-2. Use `git diff [base-branch]...HEAD` to see all changes
-3. Draft full PR summary
-4. Include test plan with TODOs
-5. Push with `-u` flag if new branch
+Use `git diff [base-branch]...HEAD`, the full history, not just the latest commit.
 
-**ALWAYS surface the PR URL.** Every time you create a PR, push to a PR
-branch, or resolve a PR's conflicts, the final message to the user MUST
-contain the full PR URL as a clickable link. No exceptions: "linked it
-earlier in the conversation" does not count — the user merges from the
-latest message, not from scrollback. Burn: 2026-08-12, user had to ask
-"URLくれ" before merging PR #31 because the link only appeared at creation
-time.
-
-## Feature Implementation Workflow
-
-1. **Plan First**
-   - Use **planner** agent to create implementation plan
-   - Identify dependencies and risks
-   - Break down into phases
-
-2. **TDD Approach**
-   - Use **tdd-guide** agent
-   - Write tests first (RED)
-   - Implement to pass tests (GREEN)
-   - Refactor (IMPROVE)
-   - Verify 80%+ coverage
-
-3. **Code Review**
-   - Use **code-reviewer** agent immediately after writing code
-   - Address CRITICAL and HIGH issues
-   - Fix MEDIUM issues when possible
-
-4. **Commit & Push**
-   - Detailed commit messages
-   - Follow conventional commits format
+**ALWAYS surface the full PR URL as a clickable link in the final message**, on every
+PR creation, PR-branch push, and conflict resolution. "Linked it earlier" does not count.
+Burn: 2026-08-12, user had to ask "URLくれ" before merging PR #31.

@@ -1,9 +1,11 @@
 ---
 name: deep-dive
-description: "Two-stage investigation pipeline: trace the WHY via 3 parallel causal-hypothesis lanes, then crystallize the WHAT by feeding trace findings into deep-interview. Use when the user says 'deep dive', asks WHY something behaves this way before speccing a fix, or wants a spec grounded in evidence rather than assumptions. Invoke via /deep-dive. For codebase-wide architecture mapping use sciomc."
+description: "Two-stage investigation pipeline: trace the WHY via 3 parallel causal-hypothesis lanes, then crystallize the WHAT by feeding trace findings into deep-interview. Use when the user says 'deep dive', asks WHY something behaves this way before speccing a fix, or wants a spec grounded in evidence rather than assumptions. Invoke via /deep-dive. For codebase-wide architecture mapping read skills/team/references/sciomc/SKILL.md."
 user_invocable: true
 argument-hint: "<problem or exploration target>"
 ---
+> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/`、omc-teams / sciomc は `skills/team/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
+
 
 # Deep Dive Skill (/deep-dive)
 
@@ -157,7 +159,7 @@ Save to `.claude/deep-dive/<slug>/trace.md`:
 
 ### Phase 4: Interview with trace injection
 
-Hand off to the `deep-interview` skill (existing user skill at `~/.claude/skills/deep-interview/`). Deep-dive does not duplicate the interview protocol; it overrides exactly 3 initialization points:
+Hand off to the `deep-interview` skill (at `~/.claude/skills/plan/references/deep-interview/`). Deep-dive does not duplicate the interview protocol; it overrides exactly 3 initialization points:
 
 **Override 1 : initial_idea enrichment.** Replace the raw user input with:
 
@@ -194,7 +196,7 @@ Ask these first, then continue with normal ambiguity-driven questioning.
 Then run the deep-interview skill's main loop:
 
 ```
-Skill("deep-interview")  # with the 3 overrides applied as initial context
+Read("~/.claude/skills/plan/references/deep-interview/SKILL.md") してその手順に従う  # with the 3 overrides applied as initial context
 ```
 
 ### Spec generation

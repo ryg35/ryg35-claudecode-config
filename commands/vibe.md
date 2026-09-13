@@ -90,7 +90,7 @@ This phase is **plan-first (opt-in generation)**. `/vibe` assumes the user has a
 
 #### Step 2.1 — Discover existing plans
 
-**Discovery order: `specs/` first, `docs/plan/` second, generate last.** A repo running SPEC-driven work keeps its work list in `specs/<NNN>-<slug>/tasks.md` (see Rule 6 in `~/.claude/rules/directory-conventions.md`). Globbing only `docs/plan/*.md` makes vibe ignore that work list and generate a duplicate plan, silently.
+**Discovery order: `specs/` first, `docs/plan/` second, generate last.** A repo running SPEC-driven work keeps its work list in `specs/<NNN>-<slug>/tasks.md` (see Rule 6 in `~/.claude/skills/directory-conventions/SKILL.md`). Globbing only `docs/plan/*.md` makes vibe ignore that work list and generate a duplicate plan, silently.
 
 1. **Explicit path takes precedence.** If `$ARGUMENTS` contains a path matching `specs/*/tasks.md`, `specs/*/spec.md`, or `docs/plan/**.md` (or any `*.md` path that exists), treat it as the chosen source and jump to Step 2.3. A `specs/<NNN>-<slug>/` directory path counts too: its `tasks.md` is the source.
 2. **Scan `specs/*/tasks.md` and `specs/*/spec.md` first.** If any SPEC set exists, it wins over everything in `docs/plan/`. Read its status (see 2a below), apply the same grouping and selection order as steps 3-4 below, and treat the paired `tasks.md` as the work list. If several SPEC sets qualify, present them via `AskUserQuestion` (highest `<NNN>` first). Then jump to Step 2.3.

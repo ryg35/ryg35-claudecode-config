@@ -43,7 +43,7 @@ Decide this **before writing the first test**. Two plan locations exist in this 
 2. **`spec.md` in the same directory is the source of the test cases.** Acceptance Scenarios (`AS-N`, Given / When / Then) become test names and assertions. Functional Requirements (`FR-00N`, EARS notation) define the behavior under test. Before writing any test, read the `FR-00N` / `AS-N` listed in that task's `トレーサビリティ` field, and cite the ID in the test name or a one-line comment so the trace survives.
 3. **If there is no `specs/` directory, fall back to `docs/plan/<name>.md`** (planner convention).
 
-Never read from both. If a SPEC set and a `docs/plan/` file both cover the same work, STOP and ask the user which one is authoritative (`~/.claude/rules/directory-conventions.md` Rule 6 forbids the duplicate).
+Never read from both. If a SPEC set and a `docs/plan/` file both cover the same work, STOP and ask the user which one is authoritative (`~/.claude/skills/directory-conventions/SKILL.md` Rule 6 forbids the duplicate).
 
 Green tests are not the finish line. The finish line is "the `FR-00N` / `AS-N` this task traces to is satisfied".
 

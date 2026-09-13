@@ -1,0 +1,210 @@
+# 日本語NGワード検査のルール定義（機械照合の正）
+#
+# 人間向けの説明は ~/.claude/rules/voice.md。このファイルは検査器が読む側。
+# 照合するのは ~/.claude/scripts/ng-words-check.sh（PostToolUse hook）。
+# 語を足すときは /ng-word-add を使う。手で足したらテストが落ちる。
+#
+# 1ルールの形:
+#   - id:      kebab-case で一意。出力には出ないが grep の目印になる
+#     pattern: Python の re で書く
+#     reason:  なぜ駄目か。1行。ここに禁止語そのものを書くと自爆する
+#     good:    その語を使わずに同じ意味を言う文。1つ以上。検査対象外
+#     selfcheck: pattern が必ず当たるはずの例文。1つ。当たらなければ警告が出る
+#     scope:   all（全文書） | external（対外文書のみ）
+#     flags:   省略可。"i" で大文字小文字を無視
+#     unless_line_contains: 省略可。マッチ直後64文字以内にこの正規表現があれば
+#                           見逃す。行のどこかにあれば、ではない。1行に3語並んだとき
+#                           先頭の1語を説明しただけで残り2語まで消えるのを防ぐ
+#
+# selfcheck を書かないルールは、正規表現を1文字間違えても誰も気づかない。
+# 検査は動いているように見えて、その語だけ素通りする。最悪の壊れ方だ。
+#
+# 英単語の境界に \b を使うな。「DOMテスト」の M と テ は両方 \w なので境界にならず、
+# 日本語に接した英単語を取りこぼす。(?<![A-Za-z0-9_]) と (?![A-Za-z0-9_]) で囲め。
+#
+# scope: external が効くのは、パスに /02-think-output/ /note/ /lp/ を含む文書か、
+# frontmatter に audience: external がある文書だけ。ディレクトリ名が external でも
+# それだけでは対外扱いにしない（社内の作業ディレクトリと見分けが付かないため）。
+#
+# 検査器のパーサは YAML の一部しか解釈しない。詳細は ng-words-check.py の
+# 冒頭コメントを読むこと。値のクォートは対になっているときだけ剥がれる。
+# ダブルクォート内で戻すエスケープは \\ と \" の2種類だけ。それ以外は生で渡る。
+
+rules:
+  - id: em-dash
+    pattern: "—"
+    reason: "em dash はAIっぽさの最大の兆候。カンマ、ピリオド、... で区切れ"
+    good:
+      - "認証が落ちた。原因は auth.ts:47 の null 未チェック"
+      - "遅いのは N+1 クエリ、50アイテムで約200ms"
+    selfcheck: "設計の意図と実装のずれ—これが今回の原因だ"
+    scope: all
+
+  - id: ai-vocab-en-emphasis
+    pattern: '(?<![A-Za-z0-9_])(?:crucial|pivotal|significant|fundamental|underscore)(?![A-Za-z0-9_])'
+    reason: "重要だと言うだけの語。何がどう効くのかを数字と対象で書け"
+    good:
+      - "This one line decides whether the session survives: auth.ts:47."
+      - "Skipping it costs every user a 3-second spinner on page load."
+    selfcheck: "This is crucial to the release."
+    scope: all
+    flags: "i"
+
+  - id: ai-vocab-en-quality
+    pattern: '(?<![A-Za-z0-9_])(?:robust|comprehensive|nuanced|multifaceted|intricate|vibrant)(?![A-Za-z0-9_])'
+    reason: "品質をぼかす形容語。何件通ったか、何を落としたかで書け"
+    good:
+      - "Covers all 14 error paths; retries only on 5xx."
+      - "Handles the 3 cases we hit in production last month."
+    selfcheck: "この再試行は robustな作りだと書いてしまった"
+    scope: all
+    flags: "i"
+
+  - id: ai-vocab-en-connective
+    pattern: '(?<![A-Za-z0-9_])(?:furthermore|moreover|additionally)(?![A-Za-z0-9_])'
+    reason: "論文調のつなぎ。文を切って並べ直せ"
+    good:
+      - "The cache also drops on deploy."
+      - "Second problem: the retry has no backoff."
+    selfcheck: "Furthermore, the cache never expires."
+    scope: all
+    flags: "i"
+
+  - id: ai-vocab-en-imagery
+    pattern: '(?<![A-Za-z0-9_])(?:landscape|tapestry|interplay)(?![A-Za-z0-9_])'
+    reason: "比喩で中身を隠している。誰が何をするかで書け"
+    good:
+      - "Three vendors ship this; two of them charge per seat."
+      - "The scheduler and the cache fight over the same lock."
+    selfcheck: "The AI landscape changed in three months."
+    scope: all
+    flags: "i"
+
+  - id: ai-vocab-en-verbs
+    pattern: '(?<![A-Za-z0-9_])(?:delve|foster|showcase)(?![A-Za-z0-9_])'
+    reason: "動詞が誇張されている。read, build, show のような普通の語を使え"
+    good:
+      - "Read the diff before you judge the design."
+      - "Here is the failing test, run it yourself."
+    selfcheck: "Let me delve into the log."
+    scope: all
+    flags: "i"
+
+  - id: ai-vocab-ja-delve
+    pattern: "深掘り"
+    reason: "AI翻訳調。何をどこまで調べるのかを具体に書け"
+    good:
+      - "ログを3日分さかのぼって失敗したリクエストだけ抜く"
+      - "原因の候補を2つに絞って、片方ずつ潰す"
+    selfcheck: "ログの深掘りを明日やる"
+    scope: all
+
+  - id: ai-vocab-ja-adjective
+    pattern: "包括的|多面的|堅牢|画期的|革新的|本質的"
+    reason: "AI翻訳調の形容語。件数、範囲、壊れない条件で書け"
+    good:
+      - "14本ある異常系のうち14本を通した"
+      - "同時100接続まで落ちないことを実測した"
+    selfcheck: "包括的なテストを書いた"
+    scope: all
+
+  - id: ai-vocab-ja-connective
+    pattern: "さらに加えて|加えて述べると|留意すべき"
+    reason: "AI翻訳調のつなぎ。文を切って、事実を先に置け"
+    good:
+      - "もう1つある。デプロイのたびにキャッシュが消える"
+      - "落とし穴は再試行にバックオフが無いこと"
+    selfcheck: "さらに加えて、再試行にバックオフが無い"
+    scope: all
+
+  - id: ai-vocab-ja-cliche
+    pattern: "豊かなタペストリー|に他ならない|という側面も忘れてはならない"
+    reason: "決まり文句。断定するか、事実を1つ足すかのどちらかにしろ"
+    good:
+      - "原因はここ1箇所だ"
+      - "副作用が1つある。既存のセッションが全部切れる"
+    selfcheck: "原因は設定の読み込み順に他ならない"
+    scope: all
+
+  - id: ai-vocab-ja-landscape
+    pattern: "(?:AI|技術|市場|競争|ビジネス)の景観"
+    reason: "比喩の景色。誰が何を出しているかを名前と数で書け"
+    good:
+      - "同じ機能を出しているのは3社、うち2社は席数課金"
+      - "国内で使えるのは2択、どちらも月5万円から"
+    selfcheck: "技術の景観はこの3ヶ月で変わった"
+    scope: all
+
+  - id: banned-phrase-filler
+    pattern: "ここが肝心なのは|つまり結局のところ|要するに|順を追って説明しましょう"
+    reason: "前置きの空咳。結論をそのまま1行目に置け"
+    good:
+      - "auth.ts:47 が undefined を返している。それが原因だ"
+      - "直し方は2行。null チェックを足して /login に飛ばす"
+    selfcheck: "要するに、認証が落ちている"
+    scope: all
+
+  - id: banned-phrase-plot-twist
+    pattern: "plot twist"
+    reason: "劇場化した書き出し。起きた事実をそのまま書け"
+    good:
+      - "予想と逆だった。キャッシュが効いていたのは本番だけ"
+      - "犯人は設定ファイルではなく起動順だった"
+    selfcheck: "plot twist: 犯人は起動順だった"
+    scope: all
+    flags: "i"
+
+  - id: banned-phrase-overstate
+    pattern: "強調してもしすぎることはない"
+    reason: "誇張。強調したいなら理由を1つ具体で足せ"
+    good:
+      - "ここを飛ばすと顧客のデータが消える"
+      - "この1行が無いと、全ユーザが白画面を見る"
+    selfcheck: "この確認の重要性は強調してもしすぎることはない"
+    scope: all
+
+  - id: banned-phrase-certainty
+    pattern: "間違いなく[^。]{0,20}(?:だ|です|である)"
+    reason: "根拠のない断定。測った数字か、確認したコマンドを添えろ"
+    good:
+      - "3回とも同じ行で落ちた。再現手順は README に書いた"
+      - "手元では通る。CI では未確認"
+    selfcheck: "これは間違いなくバグだ"
+    scope: all
+
+  - id: body-part-metaphor
+    pattern: "(?:が|は|を|の)(?:心臓|背骨|血液)(?:だ|です|である|になる|として)"
+    reason: "体の部位のたとえは中身が空。何がどう効いているかを機能で書け"
+    good:
+      - "このキューが詰まると、後続の処理が全部止まる"
+      - "設定の読み込み順が、他の全モジュールの初期化を決める"
+    selfcheck: "このキューが心臓だ"
+    scope: all
+
+  - id: fabrication-euphemism
+    pattern: "創作ゼロ|創作はゼロ|(?:数字|データ|事実|情報)の創作"
+    reason: "捏造の言い換え。事実の話は「作っていない」「出典がある」と書け"
+    good:
+      - "数字は全部出典付き。出典が無いものは載せていない"
+      - "推定値には推定と書き、計算式も並べた"
+    selfcheck: "数字の創作はゼロだと書いてある"
+    scope: all
+
+  - id: fabrication-zero-design
+    pattern: "捏造ゼロ設計"
+    reason: "対外文書で使うと中身の無い宣言になる。何をしないかを具体に書け"
+    good:
+      - "出典のない数字は出しません"
+      - "掲載した数値はすべて一次資料へのリンクを付けています"
+    selfcheck: "この記事の数字は捏造ゼロ設計で作りました"
+    scope: external
+
+  - id: unexplained-jargon
+    pattern: '(?<![A-Za-z0-9_])(?:DOM|localStorage|CC BY|API|JSON|CSV|OAuth|SSR|CDN)(?![A-Za-z0-9_])'
+    reason: "対外文書では初出で一言説明せよ。読み手が作り手とは限らない"
+    good:
+      - "画面を自動で操作して確かめるテスト（DOMテスト）"
+      - "出典を書けば誰でも使えるライセンス（CC BY）"
+    selfcheck: "DOMテストを毎晩流しています"
+    scope: external
+    unless_line_contains: "（|とは"

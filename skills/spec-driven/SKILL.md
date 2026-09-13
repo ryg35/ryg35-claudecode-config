@@ -4,6 +4,8 @@ description: "SPEC駆動開発。specs/<NNN>-<slug>/ に spec.md + plan.md + tas
 user_invocable: true
 argument-hint: "[<機能名 or specs/<NNN>-<slug>>]"
 ---
+> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/`、omc-teams / sciomc は `skills/team/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
+
 
 # SPEC駆動開発 (/spec-driven)
 
@@ -66,9 +68,11 @@ flowchart TD
     RESYNC --> RQ{変更の入口は? 7.1}
     RQ -->|ID の意味が変わる or 増減する| RESPEC[spec → plan → tasks → 実装 の順で更新<br/>順序を守る。tasks だけ直さない]
     RQ -->|設計だけ変わる。spec は不変| REPLAN[plan から。7.1 の 2<br/>checklist と analyze を再実行]
+    RQ -->|T の分割・順序だけ変わる。spec も plan も不変| RETASK[tasks から。7.1 の 3<br/>analyze を再実行]
     RQ -->|バグ / 小改修| ISSUE[Issue を立てる → PR]
     RESPEC --> GATE
     REPLAN --> GATE
+    RETASK --> GATE
     ISSUE --> IMPL
 
     style ASK fill:#FFF3CD
@@ -80,6 +84,9 @@ flowchart TD
 ```
 
 黄色 = 品質ゲート、緑 = 人間の承認ゲート。
+
+`ASK` で No と答えられた場合は Q3 に落ちる。**setup のゲートを断られても、規模の判定はもう一度やる。**
+断りは「今は要らない」であって「この作業は小さい」ではない。
 
 **置き場は `specs/<NNN>-<slug>/`。** リポジトリ直下、3桁連番プレフィックス、`docs/` の下ではない。
 連番はブランチ名 `feat/001-side-preview-translation` と一致させる。名前だけでブランチと spec が対応する。
@@ -113,7 +120,7 @@ flowchart TD
 `<NNN>` は既存 `specs/` の最大値 +1。ディレクトリが1つも無ければ `001`。
 同時にブランチ名を `feat/<NNN>-<slug>` で切る。
 
-**採番したら直ちに `mkdir specs/<NNN>-<slug>/` で予約する。spec.md を書き終わるまで待たない。**
+**採番したら直ちに `mkdir -p specs/<NNN>-<slug>/` で予約する。spec.md を書き終わるまで待たない。**
 実測 2026-08-17: 採番から spec.md 完成までの2時間のあいだに、別セッションが同じ 003 を取った。
 
 ### Step 1: specify
@@ -128,7 +135,14 @@ flowchart TD
 
 宣言文: 「clarify: 未確定 N 件をユーザーに確認する」
 
-`[要確認:` を grep して残数を数える。0でなければ `ask-brief` 形式で最大4問ずつバッチして聞く。
+`[要確認:` の残数を数える。**`-F` を必ず付ける。** `[` は正規表現のブラケット開始なので、
+付けないと未閉じで構文エラーか、環境によっては偽のゼロ件を返す。
+
+```bash
+grep -Fc '[要確認:' spec.md
+```
+
+0でなければ `ask-brief` 形式で最大4問ずつバッチして聞く。
 0になるまで Step 3 に進まない。**ゼロ件を grep で示せないうちは、このゲートは通っていない。**
 
 `[要確認:` が0件でも、**数値境界は毎回この定型で確認する。「以上 / 以下 / 超える / 未満」のどれか、元の文言と突き合わせたか。**
@@ -172,12 +186,20 @@ Setup → Foundational → User Story の順。test タスクを対応する imp
 1. spec.md の全 ID (US-N / AS-N / FR-00N / SEC-N / SC-N / EC-N / ASM-N) が
    `## タスク一覧` のトレーサビリティ列に1回以上出るか
 
+   **spec 側を列挙するだけでは検査にならない。** tasks 側と突き合わせ、差集合が0行であることを見る。
+   1行でも出たら、その ID はどのタスクにも紐づいていない
+
    ```bash
-   grep -ohE '^(\| |### |- \*\*)(US|AS|FR|SEC|SC|EC|ASM)-[0-9]+' spec.md | grep -oE '(US|AS|FR|SEC|SC|EC|ASM)-[0-9]+' | sort -u
+   comm -23 \
+     <(grep -ohE '^(\| |### |- \*\*)(US|AS|FR|SEC|SC|EC|ASM)-[0-9]+' spec.md | grep -oE '(US|AS|FR|SEC|SC|EC|ASM)-[0-9]+' | sort -u) \
+     <(grep -E '^\| T-' tasks.md | grep -oE '(US|AS|FR|SEC|SC|EC|ASM)-[0-9]+' | sort -u)
    ```
 
    **Success Criteria / Edge Cases / Assumptions も ID を持つ。** 拾わないと、受入基準そのものが
    どのタスクにも紐づかないまま出荷される
+
+   **「含まない (次イテレーション)」に置いた ID は、この差集合に出て当然。** 出た ID がスコープ外の
+   列挙と一致するかを目で照合し、一致しないものだけを未紐付けとして扱う
 
 2. tasks.md が参照する R-N / Q-N が plan.md に実在するか。
    **`R-[0-9]+` をそのまま grep すると `FR-002` の後半に当たる。** 前を1文字見て弾く
@@ -384,7 +406,8 @@ A / A' のどちらにも該当しないときは B〜E を数える。**2つ以
   テンプレに従うほど分母が欠ける。実測 2026-08-17: 旧パターン `^\| (US|AS|FR|SEC)-` は
   `repo-A` 001 で 6 (正: 7)、002 で 0 (正: 14)
 - **E. 新しく必要な T の見積もりが、既存 tasks.md の総 T 数の 1/2 を超える**
-  分母: `grep -cE '^### T-' tasks.md`
+  分母: `grep -cE '^\| T-' tasks.md` (`references/tasks-template.md` の Total と同じ式。
+  `^### T-` で数えると散文ブロック側を数えることになり、一覧表と食い違う)
 
 この基準は実績2件を再現する。`repo-A` 002 は US 3本追加 (C) と 46 T vs 001 の 44 T (E) で2条件 → 新規。
 001 のクラウドAPI追加は廃止なし / US追加なし / 触れた ID なしで0条件 → 既存更新。
@@ -497,4 +520,4 @@ SPEC を書かないケース。
 | `references/migration.md` | 7.3 の実体。`docs/plan/` からの移行の対応表・手順・検証コマンド |
 
 テンプレート3本は `repo-A` の `specs/001-side-preview-translation/` から写し取ったもの。
-節を勝手に足さない。足すときはユーザーに聞く (`~/.claude/rules/directory-conventions.md`)。
+節を勝手に足さない。足すときはユーザーに聞く (`~/.claude/skills/directory-conventions/SKILL.md`)。

@@ -187,4 +187,4 @@ description: skill / slash command / task プロンプト / CLAUDE.md 節を新�
 ## 関連
 
 - `eval-harness` skill: 恒久的な回帰ハーネスが必要になったらこちら(本 skill は単一プロンプトの反復改善用)
-- `~/.claude/rules/skill-authoring.md`: 本 skill が「指示が効くか測る」のに対し、あちらは「なぜ効くか(7つの説得原則の使い分け)」を説明する。指示を書く/直すときは両方読む。
+- `~/.claude/skills/skill-authoring/SKILL.md`: 本 skill が「指示が効くか測る」のに対し、あちらは「なぜ効くか(7つの説得原則の使い分け)」を説明する。指示を書く/直すときは両方読む。

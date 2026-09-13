@@ -39,7 +39,7 @@ Each category scores 0–10; `repo` scope sums all seven (max 70). Scoped audits
 | 4 | Memory Persistence | `MEMORY.md` exists at root, `memory/` directory exists, index size <= 200 lines, entries follow the required frontmatter |
 | 5 | Eval Coverage | `skills/eval-harness/` present, `empirical-prompt-tuning` skill present, any `tests/` or `evals/` directory under root |
 | 6 | Security Guardrails | `rules/security.md` present, `security-review` skill/command present, `settings.json` `permissions.deny` includes risky commands (e.g. `curl`, `rm -rf`), hook entries in `settings.json` |
-| 7 | Cost Efficiency | `rules/performance.md` present with model routing, no duplicate commands (grep for near-identical descriptions), agent `model:` frontmatter set where appropriate |
+| 7 | Cost Efficiency | `rules/model-delegation.md` present with model routing, no duplicate commands (grep for near-identical descriptions), agent `model:` frontmatter set where appropriate |
 
 ### Deduction Guide
 
