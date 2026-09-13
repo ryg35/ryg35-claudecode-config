@@ -5,10 +5,10 @@ Claude Code(`~/.claude/`)向けのハーネス設定一式(OSS / MIT)。日々�
 **入っているもの:**
 
 - **オーケストレーションcommand 5本**: `/project-init` `/vibe` `/pre-pr-review` `/commit-push` `/review-prs`。日々の開発はほぼこの5つで完結する(command全体では20本)
-- **specialized agent 31本**: planner / architect / tdd-guide / security-reviewer / tracer など。実装と審査を別モデル系統に分ける分業前提の構成
-- **skill群**: 統合レビュー(`code-review`)、SPEC駆動開発(`spec-driven`)、合議計画(`ralplan`)、Codex収束レビュー(`codex-converge`)、持続実行(`ralph` / `ultrawork`)ほか
+- **specialized agent 28本**: planner / architect / tdd-guide / security-reviewer / tracer など。実装と審査を別モデル系統に分ける分業前提の構成
+- **skill群**: 統合レビュー(`code-review`)、SPEC駆動開発(`spec-driven`)、合議計画(`ralplan`)、Codex収束レビュー(`skills/plan/references/codex-converge/SKILL.md` を読んで従う手順)、持続実行(`ralph`、および `skills/ralph/references/ultrawork`)ほか
 - **防御hook**: `scripts/pre-tool-enforcer.sh` がコマンドをトークナイズ解析し、main直push・force push・`gh repo create --push` 等を前方一致denyでは防げない形まで含めてブロック
-- **開発規範(`rules/`)とテンプレート**: coding-style / testing / security / git-workflow / directory-conventions / backup-verification、Burn Log(同じ失敗を2回したらルール化)などの運用規約
+- **開発規範(`rules/`)とテンプレート**: coding-style / security / git-workflow / model-delegation / voice / agents / ng-words.yaml、Burn Log(同じ失敗を2回したらルール化)などの運用規約
 
 実運用中の `~/.claude/` からサニタイズして公開しているスナップショットであり、思想が強めのopinionatedな構成。まず「そのまま使う前に読むこと」(下記)を読んでから導入してほしい。
 
@@ -65,7 +65,7 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 
 レビューの実装は1本しかない。`/pre-pr-review` も `/review-prs` も `/vibe` の Review フェーズも、同じ [`skills/code-review`](./skills/code-review/SKILL.md) を読んで実行する薄い入口にすぎない(詳細は下記)。
 
-「決定が hard to reverse」(認証 / schema migration / 公開API / 破壊的変更) な時、または「実装前に plan を限界まで磨きたい」時は `/ralplan` や `/codex-converge` を使う。受入基準そのものが曖昧なまま複数ファイルに手を入れる規模なら `/spec-driven` から入る(いずれも詳細は下記「各commandの要点」)。日々の小タスクには重すぎるので、必要な場面でだけ起動する。
+「決定が hard to reverse」(認証 / schema migration / 公開API / 破壊的変更) な時、または「実装前に plan を限界まで磨きたい」時は `/ralplan` や `codex-converge`(plan skill の references/codex-converge/SKILL.md を Read して従う)を使う。受入基準そのものが曖昧なまま複数ファイルに手を入れる規模なら `/spec-driven` から入る(いずれも詳細は下記「各commandの要点」)。日々の小タスクには重すぎるので、必要な場面でだけ起動する。
 
 ---
 
@@ -131,9 +131,9 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 - APPROVE になるまで Planner → Architect → Critic を **最大5 iter** 反復(sequential、parallel ではない)
 - `--deliberate` で pre-mortem (3シナリオ) + 拡張テスト計画 (unit / integration / e2e / observability) を強制
 - `--planner claude` / `--architect claude` でCodexからClaude Opusに戻す、`--critic codex` でCriticだけ独立性より速度を優先してCodexに切り替える(いずれもopt-in)
-- `--with-codex` で APPROVE 後に **`/codex-converge` を自動接続** (下記)
+- `--with-codex` で APPROVE 後に **`codex-converge`(plan skill の references/)を自動接続** (下記)
 
-### `/codex-converge` ... Codex 独立reviewで docs を限界まで磨く
+### `codex-converge`(plan skill の references/codex-converge/SKILL.md を Read して従う) ... Codex 独立reviewで docs を限界まで磨く
 
 単一 docs (plan / ADR / RFC / spec) に対して Codex 3本 (standard / adversarial / spec-diff) を並列起動し、指摘を反映して再 review、を繰り返す。
 
@@ -144,7 +144,7 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
   - USER STOP: 各ラウンド末の AskUserQuestion で停止選択 (`--auto` で skip)
 - **severity**: `--severity P0|P1|P2` (default P1)。 P0 only で軽量、P2 で strict
 - **opt-in flag**: `--no-adversarial` / `--no-spec-diff` で reviewer を絞れる
-- 単体使用 (`/codex-converge docs/plan/xxx.md`) と `/ralplan --with-codex` 経由の自動起動の両対応
+- 単体使用 (plan skill の references/codex-converge/SKILL.md を Read して手順に従う) と `/ralplan --with-codex` 経由の自動起動の両対応
 - 出力: 各ラウンドの Codex 出力 (`/tmp/codex-converge-*-r<N>-*.md`) + 収束テーブル(R毎の P1 件数) を chat に提示
 
 ### `/spec-driven` ... 受入基準を先に固めてから実装する
@@ -155,7 +155,7 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 - **FRはEARS記法の6パターンで書く。** 「速い」「適切に処理する」のような曖昧な要求をAIの解釈で確定させないため。数値境界(以上 / 超える)は毎回原文と突き合わせて確認するゲートつき
 - **要件ID → タスクID のトレーサビリティ**を `tasks.md` のタスク一覧表で保つ。spec.md の全ID(US / AS / FR / SEC / SC / EC / ASM)が1回以上タスク側に現れるかを grep で検査する
 - **仕様は凍らせない。** 実装中に仕様が変わったら「本文を更新 + 変更前の原文を引用 + 仕様変更ログに追記」の3点セットで残す
-- **9工程のうち新設は specify と tasks の2つだけ**。clarify は `deep-interview` / `ask-brief`、plan は `planner` agent、checklist と analyze は `critic` agent、implement は `tdd-guide` + `executor`、converge は `verifier` と、既存資産の再配線で組んでいる
+- **9工程のうち新設は specify と tasks の2つだけ**。clarify は `deep-interview`(plan skill の references/deep-interview)/ `ask-brief`、plan は `planner` agent、checklist と analyze は `critic` agent、implement は `tdd-guide` + `executor`、converge は `verifier` と、既存資産の再配線で組んでいる
 - 雛形は [`skills/spec-driven/references/`](./skills/spec-driven/references/) に3本(spec / plan / tasks)、既に `docs/plan/` で走っているリポジトリ向けの移行手順も同ディレクトリの `migration.md` にある
 - `/vibe` の Plan フェーズは `specs/` を先に探すので、SPEC駆動で回しているリポジトリでは自動的にこの作業リストが使われる
 
@@ -171,7 +171,7 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 |---------|------|
 | `/plan` | 実装計画のみを作る(vibeの外で計画だけ欲しい時、1 pass) |
 | `/spec-driven` | `specs/<NNN>-<slug>/` に spec / plan / tasks の3点セットを作って実装に入る |
-| `/codex-converge` | 単一docs(plan / ADR / RFC)を Codex 3本収束ループで磨く(連続2R P1=0で停止) |
+| `codex-converge`(plan skill の references/) | 単一docs(plan / ADR / RFC)を Codex 3本収束ループで磨く(連続2R P1=0で停止) |
 | `/tdd` | Red-Green-Refactor の実装のみ(80%閾値を下回るファイルのcoverage sweep込み) |
 | `/build-fix` `/verify` | `build-error-resolver` / `verifier` agentへの委譲(修復と、fresh outputでのPASS/FAIL判定) |
 | `/fetch-pull` | mainの最新化だけ |
@@ -196,7 +196,6 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 | `build-error-resolver` | ビルド/型エラーの最小修正 |
 | `e2e-runner` | Playwright scaffold と実行 |
 | `doc-updater` | docs/ と codemap の更新 |
-| `refactor-cleaner` | 死にコード削除 |
 | `chaos-engineer` / `sre-engineer` / `error-detective` | resilience 3-pack |
 | `harness-optimizer` | `~/.claude/` のauditと改善提案 |
 
@@ -209,9 +208,9 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 | ディレクトリ | 役割 |
 |------|------|
 | [`commands/`](./commands/) | slash command 定義20本(`/vibe` `/project-init` 等)。実装を持つものと、agent/skillへ委譲する薄膜が混在 |
-| [`agents/`](./agents/) | specialized subagent 定義31本 |
-| [`skills/`](./skills/) | Progressive Disclosureで呼ばれる知識パッケージ(例: [`code-review`](./skills/code-review/SKILL.md) / [`spec-driven`](./skills/spec-driven/SKILL.md) / `vercel-react-best-practices`) |
-| [`rules/`](./rules/) | 常時ロードされる開発規範(coding-style / testing / security / git-workflow / directory-conventions / backup-verification 等) |
+| [`agents/`](./agents/) | specialized subagent 定義28本 |
+| [`skills/`](./skills/) | Progressive Disclosureで呼ばれる知識パッケージ26本(例: [`code-review`](./skills/code-review/SKILL.md) / [`spec-driven`](./skills/spec-driven/SKILL.md) / `ralph`)。`codex-converge` / `deep-interview` / `autopilot` は `skills/plan/references/` に同梱 |
+| [`rules/`](./rules/) | 常時ロードされる開発規範(coding-style / security / git-workflow / model-delegation / voice / agents / ng-words.yaml) |
 | [`templates/`](./templates/) | プロジェクト初期化seed。[`PROJECT-SEED.md`](./templates/PROJECT-SEED.md) が単一のsource of truth |
 | [`hooks/`](./hooks/) + [`scripts/`](./scripts/) | PreToolUse / PostToolUse / Stop / SessionStart 等で走るshell/python script |
 | [`bin/`](./bin/) | 手で叩ける小物(レビュー実行ログの追記など) |
@@ -245,15 +244,16 @@ secret系やローカル固有の状態(`.claude.json`, `cache/`, `sessions/`, `
 - **`settings.json` の permissions は攻めた構成。** `Read(**)` / `Edit(**)` を許可し、denyリストと hooks(`scripts/pre-tool-enforcer.sh` 等)をガードレールにする設計。この前提を理解せずに流用すると、Claudeにほぼフル書き込み権限を渡すことになる。導入前に `permissions` セクションと deny リストを必ず読むこと
 - **前提ツール**: `jq`(hooks必須)、`gh`(git系skill)、Codex CLI(`codex-*` scripts / second-opinion)、`cmux` / `yazi`(statusline・ペイン連携、無くても他は動く)
 - **作者の運用に紐づくhookが混ざっている。** 例えば `scripts/public-export-reminder.sh` は、この設定リポ自体にcommitが入ったときだけ「公開ミラーへ反映するか」を毎回確認させるPostToolUse hook。手元で設定を育てるだけなら `settings.json` から外していい
-- **含まれないもの**: インストール由来のスキルパック(plaud系 / issue-filer / Cloudflare公式 等)と、別途インストール前提のスキル(deployment-automation / expo-deployment / find-skills / supabase-postgres-best-practices)は実体を含まない
+- **含まれないもの**: インストール由来のスキルパック(plaud系 / issue-filer / Cloudflare公式 等)は別途インストール前提で、このリポには実体を含まない。`deployment-automation` / `expo-deployment` / `find-skills` / `supabase-postgres-best-practices` / `vercel-react-best-practices` は2026-09-13のharness GCで削除済み(60日間使用実績ゼロ)。GCログと削除物の退避先はローカルにのみ残り、リポには含まれない
 - `statusline-command.sh` は生成物のため未収録。statusline は各自の環境で再生成が必要
+- **`settings.json` の `enabledPlugins` は `codex@openai-codex` 以外すべて `false`。** skillの説明文は全システムプロンプトに文書化されていない約16,000文字の予算内で注入される([anthropics/claude-code#13099](https://github.com/anthropics/claude-code/issues/13099))。無効化した4プラグイン(`llm-application-dev` / `example-skills` / `cloudflare`、および社内marketplace経由の1本)は60日間の使用実績ゼロのまま62,531文字を消費していた。このハーネスを薄く保つための設計判断で、有効化するプラグインは使用実績で選ぶこと
 
 ---
 
 ## 関連ドキュメント
 
 - [`CLAUDE.md`](./CLAUDE.md) ... 全プロジェクト共通原則(Codex review前提、品質優先、Output Language等)
-- [`rules/`](./rules/) ... coding-style / testing / security / git-workflow / performance / agents / model-delegation / skill-authoring、および [`directory-conventions.md`](./rules/directory-conventions.md)(`specs/` と `docs/plan/` の振り分け)と [`backup-verification.md`](./rules/backup-verification.md)(同期は表示ではなく受信側の件数で確認する)
+- [`rules/`](./rules/) ... coding-style / security / git-workflow / model-delegation / voice / agents / ng-words.yaml。`directory-conventions`(`specs/` と `docs/plan/` の振り分け)と `backup-verification`(同期は表示ではなく受信側の件数で確認する)は [`skills/directory-conventions/`](./skills/directory-conventions/) と [`skills/backup-verification/`](./skills/backup-verification/) に同梱
 - [`skills/code-review/SKILL.md`](./skills/code-review/SKILL.md) ... レビュー経路の実装(subagent 6体 + Codex 2本 + 確認ゲート2段)
 - [`skills/spec-driven/SKILL.md`](./skills/spec-driven/SKILL.md) ... SPEC駆動開発の手順と雛形
 - [`templates/PROJECT-SEED.md`](./templates/PROJECT-SEED.md) ... docs生成の単一source of truth
@@ -278,7 +278,5 @@ Issue / PR 歓迎。特に歓迎するもの:
 | [garrytan/gstack](https://github.com/garrytan/gstack) (MIT) | `rules/voice.md`(翻訳翻案)、ask-brief / Confusion Protocol の原型 |
 | [Yeachan-Heo/oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode) (MIT) | agents の一部(executor / verifier / critic / analyst 等)、skills の一部(ralph / ultrawork / team / ralplan / sciomc 等) |
 | [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code) (MIT) | `origin: ECC` 表記のファイル(eval-harness 等) |
-| Vercel (MIT) | `skills/vercel-react-best-practices/` |
-| Supabase (MIT) | `skills/supabase-postgres-best-practices/`(別途インストール、実体は未収録) |
 
 インストール由来のスキルパック(plaud系 / Cloudflare公式 / issue-filer 等)は依存物として `.gitignore` で管理外(このリポには含まれない)。
