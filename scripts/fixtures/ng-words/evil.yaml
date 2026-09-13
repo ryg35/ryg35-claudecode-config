@@ -1,0 +1,34 @@
+# クォートと行末コメントのフィクスチャ（NG_WORDS_YAML で差し替えて使う）
+#
+# 期待検出数は evil-target.md に対して 4 件。1ルールにつき1件ずつ当たる。
+# ダブルクォートのエスケープを戻さない実装だと 090-1234 を取りこぼし、
+# 行末コメントを落とさない実装だと QQNG を取りこぼす。どちらも黙って素通りする。
+
+rules:
+  - id: colon-and-hash
+    pattern: "a: b # c"
+    reason: "クォートの内側のコロンと # は本文として扱う"
+    good:
+      - "書き直し例"
+    scope: all
+
+  - id: double-quoted-backslash
+    pattern: "\\d{3}-\\d{4}"
+    reason: "ダブルクォート内のバックスラッシュ2つは1つに戻す"
+    good:
+      - "書き直し例"
+    scope: all
+
+  - id: apostrophe-inside
+    pattern: "ZZTOP"
+    reason: "don't do this"
+    good:
+      - "書き直し例"
+    scope: all
+
+  - id: trailing-comment
+    pattern: "QQNG"   # 閉じクォートより後ろはコメントとして落とす
+    reason: "行末コメント付きの値"
+    good:
+      - "書き直し例"
+    scope: all

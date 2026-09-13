@@ -234,3 +234,7 @@ Capability: 5/5 passed (pass@3: 100%)
 Regression: 3/3 passed (pass^3: 100%)
 Status: SHIP IT
 ```
+
+## 関連
+
+- `references/positive-assertion-scoring.md` ... 自由文の採点器は「正しい振る舞いが在ること」で判定する。禁止語・禁止正規表現は正しい回答を落とす (2026-08-25〜28 に4回)。採点器を書く前に読む。

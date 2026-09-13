@@ -1,7 +1,8 @@
 #!/bin/bash
 # PreToolUse hook (matcher: Edit|Write)
 # skill / agent / command / rules ファイルへの書き込み時に、
-# ~/.claude/rules/skill-authoring.md の再読を additionalContext で促す。
+# skill-authoring skill (~/.claude/skills/skill-authoring/SKILL.md) の起動を
+# additionalContext で促す。
 #
 # 背景: rules/*.md は毎セッション常駐ロードされるが、「ロードされている」と
 # 「執筆の瞬間に適用される」は別の状態 (coding-style.md Self-Verification の
@@ -48,9 +49,10 @@ print(json.dumps({
         "additionalContext": (
             "REMINDER (skill-authoring trigger): you are writing to a skill/"
             "agent/command/rules file. If this is a new file or a substantive "
-            "revision, re-read ~/.claude/rules/skill-authoring.md, pick the "
-            "persuasion principles per its table, and state your choice in "
-            "one line. Mechanical edits (typo/path fix) are exempt."
+            "revision, invoke the `skill-authoring` skill "
+            "(~/.claude/skills/skill-authoring/SKILL.md), pick the persuasion "
+            "principles per its table, and state your choice in one line. "
+            "Mechanical edits (typo/path fix) are exempt."
         ),
     }
 }))

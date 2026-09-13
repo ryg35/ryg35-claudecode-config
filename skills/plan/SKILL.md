@@ -4,6 +4,8 @@ description: "Planning skill with three modes: direct (single-pass plan), consen
 user_invocable: true
 argument-hint: "[--direct|--consensus|--review] [--interactive] [--deliberate] <task description>"
 ---
+> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/`、omc-teams / sciomc は `skills/team/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
+
 
 # Plan Skill (/plan)
 
@@ -62,7 +64,7 @@ If the user only said "plan this", default to the `/plan` command, which is the 
 
 1. **Quick analysis.** `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol ...")` for a brief requirements review when the request touches multiple subsystems. Fall back to `Task(general-purpose, model=opus)` if the Codex CLI is unavailable.
 2. **Create plan.** Use the `/plan` command's template structure (`docs/plan/<verb-topic>.md` with `_template-feature.md` / `_template-fix.md` / `_template-investigate.md`). See `~/.claude/templates/plan/` for masters.
-3. **Frontmatter:** `status: backlog` + `branch: <derived>`. Follow `~/.claude/rules/directory-conventions.md`.
+3. **Frontmatter:** `status: backlog` + `branch: <derived>`. Follow `~/.claude/skills/directory-conventions/SKILL.md`.
 4. Stop. Mark `pending approval`. Do not auto-execute.
 
 ---
@@ -111,7 +113,7 @@ If the user only said "plan this", default to the `/plan` command, which is the 
 
 6. **Apply improvements.** Merge accepted suggestions into the plan file. Add an **ADR** section: Decision / Drivers / Alternatives considered / Why chosen / Consequences / Follow-ups. Write a brief changelog at the end recording what was applied.
 
-6.5. **Codex convergence (only with `--with-codex`).** Invoke `Skill("codex-converge")` against the plan file in `--auto` mode (Claude consensus has already gated approval at step 4 Critic APPROVE; per-round user gates would duplicate that). Forward `--codex-max-rounds N` if supplied. Termination: P1 = 0 for two consecutive rounds, or max-rounds, or STUCK escalation. On STUCK / MAX-ROUNDS, surface the convergence table before continuing to step 7. Without `--with-codex`, skip this step entirely.
+6.5. **Codex convergence (only with `--with-codex`).** Read `references/codex-converge/SKILL.md` and follow it against the plan file in `--auto` mode (Claude consensus has already gated approval at step 4 Critic APPROVE; per-round user gates would duplicate that). Forward `--codex-max-rounds N` if supplied. Termination: P1 = 0 for two consecutive rounds, or max-rounds, or STUCK escalation. On STUCK / MAX-ROUNDS, surface the convergence table before continuing to step 7. Without `--with-codex`, skip this step entirely.
 
 7. **Approval gate.** Mark `pending approval`.
    - With `--interactive`, present options via `AskUserQuestion`:
@@ -143,7 +145,7 @@ If the Codex CLI is missing or errors, note the fallback and continue with the C
 After step 6 (Apply improvements + ADR), opt-in to an independent Codex review loop:
 
 - Trigger: `--with-codex` flag explicitly. Off by default; Claude consensus alone is enough for most plans.
-- Mechanism: `Skill("codex-converge")` runs Codex 3 ways (standard + adversarial + spec-diff) in parallel against the plan file, reflects findings, repeats. Terminates on P1 = 0 for two consecutive rounds.
+- Mechanism: Read `references/codex-converge/SKILL.md` and follow it runs Codex 3 ways (standard + adversarial + spec-diff) in parallel against the plan file, reflects findings, repeats. Terminates on P1 = 0 for two consecutive rounds.
 - Pass-through: `--codex-max-rounds N` (default 15), `--severity P0|P1|P2` (default P1).
 - When to use: load-bearing decisions (auth/security, schema migration, public API, destructive change), or when you want an external-reviewer signal before commit.
 
@@ -178,7 +180,7 @@ Consensus and ralplan additionally include:
 - **Pre-mortem** (3 failure scenarios).
 - **Expanded test plan** (unit / integration / e2e / observability).
 
-Save plans to `docs/plan/<verb-topic>.md` (kebab-case) per `~/.claude/rules/directory-conventions.md`. Frontmatter is `status` and `branch` only. Consensus plans can also live there with the ADR section embedded.
+Save plans to `docs/plan/<verb-topic>.md` (kebab-case) per `~/.claude/skills/directory-conventions/SKILL.md`. Frontmatter is `status` and `branch` only. Consensus plans can also live there with the ADR section embedded.
 
 ---
 
@@ -259,3 +261,11 @@ Run an explore pass first.
 ```
 
 Three questions at once produce shallow answers.
+
+## 参照モード (references/ に統合したスキル)
+
+| 読む先 | いつ |
+|---|---|
+| `references/autopilot/SKILL.md` | 1〜2文の曖昧なアイデアを、要件・先行事例・実装計画まで一気に通したいとき |
+| `references/deep-interview/SKILL.md` | 曖昧さを1問ずつ潰すソクラテス式インタビューが要るとき |
+| `references/codex-converge/SKILL.md` | docs のみの成果物を Codex 3本レビューで P1=0 が2連続するまで叩くとき |

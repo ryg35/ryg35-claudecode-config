@@ -8,7 +8,7 @@
 `specs/` を持つのは `chrome-extensions/repo-A` と `repo-B` の2つだけで、どちらも `docs/plan/` が無い。
 `docs/plan/` を持つ17箇所には `specs/` が無い。**つまり本当の二重化 (状況3) は現時点で該当ゼロ。**
 別枠で `docs/specs/*.md` を持つリポジトリが5つある (内部の実験リポ群。中身はどれも計画メモ2ファイルだけ)。
-`~/.claude/rules/directory-conventions.md` Rule 6 の置き場でも3点セットでもないので、状況1と同じ扱いにする。
+`~/.claude/skills/directory-conventions/SKILL.md` Rule 6 の置き場でも3点セットでもないので、状況1と同じ扱いにする。
 
 まず数える。該当しなければ何もしない。
 
@@ -135,7 +135,7 @@ git mv docs/plan/<verb>-<topic>.md docs/plan/done/<verb>-<topic>.md
 
 ## 移行後の検証 (「移行した」と「移行できている」は別の状態)
 
-`~/.claude/rules/backup-verification.md` と同じ思想。**表示ではなく数で確認する。**
+`~/.claude/skills/backup-verification/SKILL.md` と同じ思想。**表示ではなく数で確認する。**
 宣言しただけのものは通っていない。
 
 ```bash

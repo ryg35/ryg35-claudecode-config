@@ -1,9 +1,11 @@
 ---
 name: ralplan
-description: "Consensus-planning shortcut. Invokes the plan skill in --consensus mode with RALPLAN-DR structured deliberation, and acts as a gate that auto-intercepts vague ralph/team requests before they spin up heavy execution. `autopilot` is deliberately NOT a gate keyword."
+description: "Consensus-planning shortcut. Invokes the plan skill in --consensus mode with RALPLAN-DR structured deliberation, and acts as a gate that auto-intercepts vague ralph/team requests before they spin up heavy execution. `autopilot` (now skills/plan/references/autopilot) is deliberately NOT a gate keyword."
 user_invocable: true
 argument-hint: "[--interactive] [--deliberate] [--architect codex] [--critic codex] <task description>"
 ---
+> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/`、omc-teams / sciomc は `skills/team/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
+
 
 # Ralplan Skill (/ralplan)
 
@@ -38,7 +40,7 @@ This is a thin wrapper. The actual planning behavior lives in the `plan` skill.
 - `--deliberate`: force deliberate mode (pre-mortem with 3 failure scenarios + expanded test plan covering unit / integration / e2e / observability). Without the flag, deliberate mode auto-enables when the request signals high risk.
 - `--architect codex`: use Codex CLI for the Architect pass via `codex-exec-bg.sh`. Falls back to Claude Architect if Codex CLI is missing.
 - `--critic codex`: use Codex CLI for the Critic pass via `codex-exec-bg.sh`. Falls back to Claude Critic if Codex CLI is missing.
-- `--with-codex`: after Claude consensus reaches Critic APPROVE, invoke `Skill("codex-converge")` against the plan file to harden it via independent Codex review until P1 = 0 for two consecutive rounds. Skipped by default (Claude consensus alone is enough for most plans). Opt in when the plan is load-bearing (auth / schema migration / public API / destructive change) and you want an external reviewer signal before commit.
+- `--with-codex`: after Claude consensus reaches Critic APPROVE, invoke Read `references/codex-converge/SKILL.md` and follow it against the plan file to harden it via independent Codex review until P1 = 0 for two consecutive rounds. Skipped by default (Claude consensus alone is enough for most plans). Opt in when the plan is load-bearing (auth / schema migration / public API / destructive change) and you want an external reviewer signal before commit.
 - `--codex-max-rounds N`: passed through to `codex-converge` (default 15). Only meaningful with `--with-codex`.
 
 ## Examples

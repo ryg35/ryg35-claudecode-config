@@ -1,0 +1,19 @@
+# 壊れたルールを1つずつ落として続行するフィクスチャ
+#
+# 期待: probe.md に対して 1 件。警告が2件出る（good 無しと、壊れた正規表現）。
+# 1つ壊れたら全部止まる実装だと、残りの17ルールまで黙って効かなくなる。
+
+rules:
+  - id: no-good
+    pattern: "テスト"
+    reason: "good が無いので落とす"
+  - id: bad-regex
+    pattern: '(unclosed'
+    reason: "正規表現が壊れているので落とす"
+    good:
+      - "直した文"
+  - id: works
+    pattern: "壊れていない"
+    reason: "この1つだけ生き残る"
+    good:
+      - "書き直し例"

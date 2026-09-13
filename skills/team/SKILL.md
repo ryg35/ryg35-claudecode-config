@@ -1,9 +1,11 @@
 ---
 name: team
-description: Spawn N parallel subagents on a decomposed task list, optionally mixing Claude Task subagents with Codex CLI and Gemini CLI workers. Lightweight replacement for OMC team without the MCP runtime. Uses in-session Task subagents; for separate CLI worker processes use omc-teams.
+description: Spawn N parallel subagents on a decomposed task list, optionally mixing Claude Task subagents with Codex CLI and Gemini CLI workers. Lightweight replacement for OMC team without the MCP runtime. Uses in-session Task subagents; for separate CLI worker processes read skills/team/references/omc-teams/SKILL.md.
 user_invocable: true
 argument-hint: "[N:executor|debugger|designer|writer|codex|gemini] [ralph] <task description>"
 ---
+> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/`、omc-teams / sciomc は `skills/team/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
+
 
 # Team Skill (/team)
 
@@ -259,3 +261,10 @@ If the user says "stop team", "cancel team", or "abort":
 - **Background Bash output.** Capture it with `TaskOutput`, not by hoping it shows up.
 - **Codex CLI workers hang without stdin redirection.** A backgrounded raw `codex exec` inherits a stdin that never reaches EOF and waits forever for "additional input from stdin". The mandatory wrapper `codex-exec-bg.sh` redirects stdin from /dev/null internally, so this is handled automatically; if you ever see a hang, verify the wrapper was actually used. Verified 2026-07-13 (6+ min hang raw, seconds with redirect).
 - **Do not spawn this skill from inside a worker.** Workers are leaves, not new leads.
+
+## 参照モード (references/ に統合したスキル)
+
+| 読む先 | いつ |
+|---|---|
+| `references/omc-teams/SKILL.md` | OMC 流のチーム編成 (役割分担テンプレ) を使いたいとき |
+| `references/sciomc/SKILL.md` | 調査だけを科学的手順 (仮説→実験→結論) で回し、要件化はしないとき |

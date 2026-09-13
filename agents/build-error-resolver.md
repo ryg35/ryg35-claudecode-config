@@ -475,7 +475,7 @@ Parameter 'market' implicitly has an 'any' type.
 - Dependency version conflicts
 
 **DON'T USE when:**
-- Code needs refactoring (use refactor-cleaner)
+- Code needs refactoring (out of scope; hand back to the user)
 - Architectural changes needed (use architect)
 - New features required (use planner)
 - Tests failing (use tdd-guide)
