@@ -1,0 +1,1125 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+{{THEME_CSS}}
+</style>
+<style>
+/* レイアウトと描画。色は var(--oc-*) だけを使う（生の色コードはテーマ CSS 側にある） */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden;
+  font-family: var(--oc-font); color: var(--oc-text); background: var(--oc-bg); }
+
+#oc-stage { position: fixed; inset: 0; touch-action: none; cursor: grab;
+  background-color: var(--oc-bg);
+  background-image: radial-gradient(color-mix(in srgb, var(--oc-border) 75%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px; background-position: 0 0; }
+#oc-stage.is-panning { cursor: grabbing; }
+#oc-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; user-select: none; }
+
+/* --- ツールバー --- */
+.oc-toolbar { position: fixed; left: 16px; top: 16px; display: flex; gap: 8px; align-items: center; z-index: 10; }
+.oc-panel { background: var(--oc-surface); border: 1px solid var(--oc-border);
+  border-radius: var(--oc-radius); box-shadow: 0 1px 2px color-mix(in srgb, var(--oc-text) 12%, transparent); }
+.oc-btn { font: inherit; font-size: 13px; color: var(--oc-text); background: transparent;
+  border: 0; padding: 8px 12px; cursor: pointer; border-radius: var(--oc-radius); }
+.oc-btn:hover { background: color-mix(in srgb, var(--oc-accent) 8%, transparent); }
+#oc-menu-btn { display: flex; gap: 6px; align-items: center; min-width: 190px; }
+#oc-menu-btn .oc-caret { color: var(--oc-muted); margin-left: auto; }
+.oc-menu { position: relative; }
+.oc-menu-list { position: absolute; left: 0; top: calc(100% + 6px); min-width: 320px; padding: 6px;
+  display: none; flex-direction: column; z-index: 11; }
+.oc-menu.is-open .oc-menu-list { display: flex; }
+.oc-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  font: inherit; font-size: 13px; color: var(--oc-text); background: transparent; border: 0;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.oc-menu-item:hover { background: color-mix(in srgb, var(--oc-accent) 10%, transparent); }
+.oc-menu-item .oc-check { width: 14px; color: var(--oc-accent); }
+.oc-menu-item .oc-shortcut { margin-left: auto; color: var(--oc-muted); font-size: 12px; }
+.oc-menu-sep { height: 1px; background: var(--oc-border); margin: 6px 4px; }
+
+/* --- 右上のタイトルと件数 --- */
+.oc-meta { position: fixed; right: 16px; top: 16px; z-index: 10; padding: 10px 14px; text-align: right; }
+.oc-meta-title { font-size: 14px; font-weight: 600; }
+.oc-meta-counts { font-size: 12px; color: var(--oc-muted); margin-top: 2px; }
+#oc-fit-all { font-size: 12px; padding: 4px 8px; margin-top: 6px; border: 1px solid var(--oc-border); }
+
+/* --- 右下のズーム --- */
+.oc-zoom { position: fixed; right: 16px; bottom: 16px; z-index: 10; display: flex; align-items: center; }
+.oc-zoom-value { font-size: 12px; color: var(--oc-muted); min-width: 52px; text-align: center; }
+
+/* --- 左下のヘルプ --- */
+.oc-help { position: fixed; left: 16px; bottom: 16px; z-index: 10; font-size: 11.5px;
+  color: var(--oc-muted); padding: 8px 12px; line-height: 1.6; }
+
+/* --- ツールチップ --- */
+#oc-tip { position: fixed; z-index: 12; display: none; max-width: 280px; padding: 8px 10px;
+  font-size: 12px; line-height: 1.6; pointer-events: none; }
+#oc-tip b { font-weight: 600; }
+#oc-tip .oc-tip-muted { color: var(--oc-muted); }
+
+/* --- 共通のノード --- */
+.oc-layer { display: none; }
+.oc-layer.is-active { display: inline; }
+.oc-node { cursor: grab; }
+.oc-node.is-dragging { cursor: grabbing; }
+.oc-box { fill: var(--oc-surface); stroke: var(--oc-border); stroke-width: 1; rx: var(--oc-radius); }
+.oc-node.is-hot .oc-box { stroke: var(--oc-accent); stroke-width: 2; }
+.oc-fill-1 { fill: var(--oc-group-1); }
+.oc-fill-2 { fill: var(--oc-group-2); }
+.oc-fill-3 { fill: var(--oc-group-3); }
+.oc-fill-4 { fill: var(--oc-group-4); }
+.oc-fill-5 { fill: var(--oc-group-5); }
+.oc-fill-6 { fill: var(--oc-group-6); }
+.oc-node-title { font-size: 15px; font-weight: 600; fill: var(--oc-text); }
+.oc-node-sub { font-size: 11px; fill: var(--oc-muted); }
+
+/* --- group ブロック（自動配置で作る囲み） --- */
+.oc-block-box { fill: color-mix(in srgb, var(--oc-border) 30%, transparent);
+  stroke: var(--oc-border); stroke-width: 1; }
+.oc-block-1 { fill: color-mix(in srgb, var(--oc-group-1) 30%, transparent); }
+.oc-block-2 { fill: color-mix(in srgb, var(--oc-group-2) 30%, transparent); }
+.oc-block-3 { fill: color-mix(in srgb, var(--oc-group-3) 30%, transparent); }
+.oc-block-4 { fill: color-mix(in srgb, var(--oc-group-4) 30%, transparent); }
+.oc-block-5 { fill: color-mix(in srgb, var(--oc-group-5) 30%, transparent); }
+.oc-block-6 { fill: color-mix(in srgb, var(--oc-group-6) 30%, transparent); }
+.oc-block-label { font-size: 13px; fill: var(--oc-muted); }
+
+/* --- 関連線 --- */
+.oc-line { fill: none; stroke: var(--oc-border); stroke-width: 1.5; }
+.oc-edge.is-hot .oc-line { stroke: var(--oc-accent); stroke-width: 2; }
+/* ハブ宛の線は本数が多いので、普段は細く薄く。ホバーしたときだけ前に出す */
+.oc-edge-hub .oc-line { stroke-width: 1; opacity: 0.35; }
+.oc-edge.oc-edge-hub.is-hot .oc-line { stroke: var(--oc-accent); stroke-width: 2; opacity: 1; }
+.oc-edge-label { font-size: 11.5px; fill: var(--oc-muted); text-anchor: middle;
+  paint-order: stroke; stroke: var(--oc-bg); stroke-width: 4px; stroke-linejoin: round; }
+.oc-card { font-size: 11px; font-weight: 600; fill: var(--oc-muted); text-anchor: middle;
+  paint-order: stroke; stroke: var(--oc-bg); stroke-width: 4px; stroke-linejoin: round; }
+.oc-arrow { fill: var(--oc-border); }
+
+/* --- ER --- */
+.oc-er-head { fill: color-mix(in srgb, var(--oc-text) 6%, transparent); }
+.oc-er-sep { stroke: var(--oc-border); stroke-width: 1; }
+.oc-attr { font-size: 12.5px; fill: var(--oc-text); }
+.oc-attr-type { font-size: 11.5px; fill: var(--oc-muted); text-anchor: end; }
+.oc-key { fill: none; stroke: var(--oc-muted); stroke-width: 1.4; stroke-linecap: round; }
+
+/* --- 画面フレーム --- */
+.oc-frame { fill: var(--oc-surface); stroke: var(--oc-border); stroke-width: 1; }
+.oc-frame-label { font-size: 15px; font-weight: 600; fill: var(--oc-text); }
+.oc-frame-route { font-size: 12px; fill: var(--oc-muted); }
+.oc-wire { fill: color-mix(in srgb, var(--oc-text) 7%, transparent); }
+.oc-wire-soft { fill: color-mix(in srgb, var(--oc-text) 4%, transparent); }
+.oc-wire-accent { fill: color-mix(in srgb, var(--oc-accent) 18%, transparent); }
+.oc-wire-line { stroke: var(--oc-border); stroke-width: 1; }
+.oc-wire-text { font-size: 22px; fill: var(--oc-muted); }
+.oc-wire-title { font-size: 30px; font-weight: 600; fill: var(--oc-text); }
+</style>
+</head>
+<body>
+
+<div id="oc-stage">
+  <svg id="oc-svg">
+    <defs>
+      <marker id="oc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="oc-arrow" d="M 0 0 L 10 5 L 0 10 z"></path>
+      </marker>
+    </defs>
+    <g id="oc-viewport">
+      <g class="oc-layer" data-view="screens"></g>
+      <g class="oc-layer" data-view="concept"></g>
+      <g class="oc-layer" data-view="er"></g>
+    </g>
+  </svg>
+</div>
+
+<div class="oc-toolbar">
+  <div class="oc-menu" id="oc-menu">
+    <button class="oc-btn oc-panel" id="oc-menu-btn" type="button" aria-haspopup="true" aria-expanded="false">
+      <span id="oc-menu-current">画面</span><span class="oc-caret">▾</span>
+    </button>
+    <div class="oc-menu-list oc-panel" role="menu">
+      <button class="oc-menu-item" type="button" data-act="view" data-view="screens" role="menuitem">
+        <span class="oc-check"></span><span>画面（モデルを閉じて画面群に戻る）</span><span class="oc-shortcut">1</span>
+      </button>
+      <button class="oc-menu-item" type="button" data-act="view" data-view="concept" role="menuitem">
+        <span class="oc-check"></span><span>概念図（概念と関連だけ）</span><span class="oc-shortcut">2</span>
+      </button>
+      <button class="oc-menu-item" type="button" data-act="view" data-view="er" role="menuitem">
+        <span class="oc-check"></span><span>ER 図（属性まで含める）</span><span class="oc-shortcut">3</span>
+      </button>
+      <div class="oc-menu-sep"></div>
+      <button class="oc-menu-item" type="button" data-act="relayout" role="menuitem">
+        <span class="oc-check"></span><span>自動配置（並べ直す）</span><span class="oc-shortcut">R</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="oc-meta oc-panel">
+  <div class="oc-meta-title" id="oc-title"></div>
+  <div class="oc-meta-counts" id="oc-counts"></div>
+  <button class="oc-btn" type="button" id="oc-fit-all" title="全体が入るところまで引く">全体を見る</button>
+</div>
+
+<div class="oc-zoom oc-panel">
+  <button class="oc-btn" type="button" id="oc-zoom-out" title="縮小">&#8722;</button>
+  <span class="oc-zoom-value" id="oc-zoom-value">100%</span>
+  <button class="oc-btn" type="button" id="oc-zoom-in" title="拡大">&#43;</button>
+</div>
+
+<div class="oc-help oc-panel">
+  ドラッグで移動 / ノードをドラッグで配置 / ctrl・&#8984; + ホイールでズーム / 1・2・3 でビュー切替
+</div>
+
+<div id="oc-tip" class="oc-panel"></div>
+
+<script type="application/json" id="oc-model">{{MODEL_JSON}}</script>
+<script>
+(function () {
+  'use strict';
+
+  // ===== 元データ（唯一の正本）。3 ビューともこの JSON だけから描く =====
+  var MODEL = JSON.parse(document.getElementById('oc-model').textContent);
+  var ENTITIES = MODEL.entities || [];
+  var RELATIONS = MODEL.relations || [];
+  var SCREENS = MODEL.screens || [];
+  var FLOWS = MODEL.flows || [];
+
+  var VIEWS = ['screens', 'concept', 'er'];
+  var VIEW_LABEL = { screens: '画面', concept: '概念図', er: 'ER 図' };
+
+  // 寸法（キャンバス座標）。配置の間隔は OC_LAYOUT_DEFAULTS 側に置く
+  var SIZE = {
+    conceptH: 54, conceptPadX: 24, conceptMinW: 132,
+    erHead: 36, erRow: 22, erPadY: 10, erMinW: 190, erPadX: 14,
+    screenScale: 0.34, screenLabelTop: 30
+  };
+
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  };
+  // 文字幅の目安。日本語は全角、それ以外は約 0.56em として数える
+  var textWidth = function (s, size) {
+    var w = 0, str = String(s == null ? '' : s);
+    for (var i = 0; i < str.length; i += 1) {
+      w += str.charCodeAt(i) > 0x2e80 ? 1.0 : 0.56;
+    }
+    return w * size;
+  };
+  var round = function (v) { return Math.round(v * 10) / 10; };
+
+  // group ごとの色番号（1..6 で循環）
+  var groupOrder = [];
+  ENTITIES.forEach(function (e) {
+    if (e.group && groupOrder.indexOf(e.group) === -1) groupOrder.push(e.group);
+  });
+  var groupClass = function (g) {
+    if (!g) return '';
+    return ' oc-fill-' + ((groupOrder.indexOf(g) % 6) + 1);
+  };
+
+  // entity を触る画面の逆引き
+  var screensOf = new Map();
+  SCREENS.forEach(function (s) {
+    (s.entities || []).forEach(function (id) {
+      if (!screensOf.has(id)) screensOf.set(id, []);
+      screensOf.get(id).push(s);
+    });
+  });
+
+  // ===== シーン（ビューごとのノードと線）=====
+  function buildScene(view) {
+    var nodes, edges;
+    if (view === 'screens') {
+      nodes = SCREENS.map(function (s) {
+        var w = (s.width || 1440) * SIZE.screenScale;
+        var h = (s.height || 1024) * SIZE.screenScale;
+        return { id: s.id, x: 0, y: 0, w: w, h: h, data: s };
+      });
+      edges = FLOWS.map(function (f, i) {
+        return { id: 'f' + i, from: f.from, to: f.to, label: f.label || '', card: null };
+      });
+    } else {
+      nodes = ENTITIES.map(function (e) {
+        var size = view === 'concept' ? conceptSize(e) : erSize(e);
+        return { id: e.id, x: 0, y: 0, w: size.w, h: size.h, data: e };
+      });
+      edges = RELATIONS.map(function (r, i) {
+        return { id: 'r' + i, from: r.from, to: r.to, label: r.label || '', card: r.cardinality || null };
+      });
+    }
+    var byId = new Map(nodes.map(function (n) { return [n.id, n]; }));
+    var adj = new Map(nodes.map(function (n) { return [n.id, []]; }));
+    edges = edges.filter(function (e) { return byId.has(e.from) && byId.has(e.to); });
+    edges.forEach(function (e) { adj.get(e.from).push(e); adj.get(e.to).push(e); });
+    // ハブはグラフの性質なので配置より先に決める（保存位置で復元したときも線の描き方を変えない）
+    var hubs = new Set();
+    if (view !== 'screens') {
+      ocPickHubs(nodes, edges, null).forEach(function (n) { hubs.add(n.id); });
+    }
+    return { view: view, nodes: nodes, byId: byId, edges: edges, adj: adj, hubs: hubs, el: null };
+  }
+
+  function conceptSize(e) {
+    return {
+      w: Math.max(SIZE.conceptMinW, textWidth(e.label, 15) + SIZE.conceptPadX * 2),
+      h: SIZE.conceptH
+    };
+  }
+  function erSize(e) {
+    var attrs = e.attributes || [];
+    var w = Math.max(SIZE.erMinW, textWidth(e.label, 14) + SIZE.erPadX * 2 + 40);
+    attrs.forEach(function (a) {
+      var right = a.type ? a.type : '';
+      if (a.fk) right += (right ? ' ' : '') + '→ ' + a.fk;
+      var need = 18 + textWidth(a.name, 12.5) + 24 + textWidth(right, 11.5) + SIZE.erPadX * 2;
+      if (need > w) w = need;
+    });
+    return { w: Math.ceil(w), h: SIZE.erHead + attrs.length * SIZE.erRow + SIZE.erPadY * 2 };
+  }
+
+  // ===== 自動配置 =====
+  /* === oc-layout:start ===
+     ここから配置計算の純関数。tests/layout.test.mjs がこの区間の文字列をそのまま抜き出して検査する。
+     区間の外にある変数（SIZE など）を参照しないこと。引数と OC_LAYOUT_DEFAULTS だけで閉じる。
+     ノードは { id, w, h, data } を持つ。x / y は書き込まれる。 */
+  var OC_LAYOUT_DEFAULTS = {
+    gapX: 130,          // 層（列）どうしの横の間隔
+    gapY: 44,           // 同じ列に積むノードどうしの縦の間隔
+    perColumn: 6,       // 1 層に置くノードの上限。超えたら次の列へ折り返す
+    blockPad: 22,       // group ブロックの枠の内側余白
+    blockLabelH: 30,    // group 名を書くぶんの高さ（枠の上端からノードまで）
+    blockGapX: 120,     // ブロックどうしの横の間隔
+    blockGapY: 120,     // ブロックの行どうしの縦の間隔
+    blockAspect: 1.6,   // ブロック全体の狙いの縦横比（画面が横長なので横に広げる）
+    hubMin: 8,          // ハブと見なす次数の下限
+    hubRatio: 0.15,     // ノード数に対する比。hubMin と大きい方を閾値にする
+    hubGapX: 70,        // ハブ列のノードどうしの間隔
+    hubGapY: 130,       // ハブ列とブロック群の縦の間隔
+    rowGapX: 90,        // 画面ビューの横並びの間隔
+    rowGapY: 140,       // 画面ビューを折り返したときの行間
+    rowPerLine: 10,     // 画面が多いときに 1 行に置く枚数
+    rowWrapOver: 30     // 画面がこの枚数を超えたら折り返す
+  };
+
+  function ocMergeOpts(opts) {
+    var o = {}, k;
+    for (k in OC_LAYOUT_DEFAULTS) {
+      if (Object.prototype.hasOwnProperty.call(OC_LAYOUT_DEFAULTS, k)) o[k] = OC_LAYOUT_DEFAULTS[k];
+    }
+    if (opts) {
+      for (k in opts) {
+        if (Object.prototype.hasOwnProperty.call(opts, k) && opts[k] !== undefined) o[k] = opts[k];
+      }
+    }
+    return o;
+  }
+
+  // group の表示名。group が無いノードは other ブロックに入る
+  function ocGroupOf(n) { return (n.data && n.data.group) || 'other'; }
+
+  // 次数（in + out）。自己ループは 1 本として数える
+  function ocDegrees(nodes, edges) {
+    var deg = new Map();
+    nodes.forEach(function (n) { deg.set(n.id, 0); });
+    edges.forEach(function (e) {
+      if (deg.has(e.from)) deg.set(e.from, deg.get(e.from) + 1);
+      if (e.to !== e.from && deg.has(e.to)) deg.set(e.to, deg.get(e.to) + 1);
+    });
+    return deg;
+  }
+
+  // ハブ = 次数が閾値を超えるノード、または x_kind: "external" のノード。
+  // 層の計算から外して上端に横一列で置く（1 つのノードに全部つながると層が 2 枚に潰れるため）
+  function ocPickHubs(nodes, edges, opts) {
+    var o = ocMergeOpts(opts);
+    var deg = ocDegrees(nodes, edges);
+    var limit = Math.max(o.hubMin, nodes.length * o.hubRatio);
+    var hubs = nodes.filter(function (n) {
+      return (n.data && n.data.x_kind === 'external') || deg.get(n.id) > limit;
+    });
+    hubs.sort(function (a, b) {
+      return (deg.get(b.id) - deg.get(a.id)) || (a.id < b.id ? -1 : 1);
+    });
+    return hubs;
+  }
+
+  // 配列を size 個ずつに切る（1 層が長いときの折り返し）
+  function ocChunk(items, size) {
+    var out = [], step = Math.max(1, Math.floor(size)), i;
+    for (i = 0; i < items.length; i += step) out.push(items.slice(i, i + step));
+    return out;
+  }
+
+  // from→to で層を決め、重心で 3 往復並べ替える（交差を減らす）。戻り値は層ごとのノード配列
+  function ocLayerize(nodes, edges) {
+    if (nodes.length === 0) return [];
+    var inside = new Map();
+    nodes.forEach(function (n) { inside.set(n.id, n); });
+    var links = (edges || []).filter(function (e) {
+      return e.from !== e.to && inside.has(e.from) && inside.has(e.to);
+    });
+
+    var layer = new Map();
+    nodes.forEach(function (n) { layer.set(n.id, 0); });
+    for (var pass = 0; pass <= nodes.length; pass += 1) {
+      var moved = false;
+      for (var i = 0; i < links.length; i += 1) {
+        var want = layer.get(links[i].from) + 1;
+        if (want <= nodes.length && layer.get(links[i].to) < want) {
+          layer.set(links[i].to, want); moved = true;
+        }
+      }
+      if (!moved) break;
+    }
+
+    var maxLayer = 0;
+    layer.forEach(function (v) { if (v > maxLayer) maxLayer = v; });
+    var cols = [];
+    for (var c = 0; c <= maxLayer; c += 1) cols.push([]);
+    nodes.forEach(function (n) { cols[layer.get(n.id)].push(n); });
+
+    var nb = new Map();
+    nodes.forEach(function (n) { nb.set(n.id, { in: [], out: [] }); });
+    links.forEach(function (e) { nb.get(e.from).out.push(e.to); nb.get(e.to).in.push(e.from); });
+    var pos = new Map();
+    cols.forEach(function (col) { col.forEach(function (n, i) { pos.set(n.id, i); }); });
+    var sweep = function (col, dir) {
+      col.forEach(function (n) {
+        var ns = nb.get(n.id)[dir].map(function (id) { return pos.get(id); })
+          .filter(function (v) { return v !== undefined; });
+        n._b = ns.length ? ns.reduce(function (a, b) { return a + b; }, 0) / ns.length : pos.get(n.id);
+      });
+      col.sort(function (a, b) { return (a._b - b._b) || (a.id < b.id ? -1 : 1); });
+      col.forEach(function (n, i) { pos.set(n.id, i); });
+    };
+    for (var it = 0; it < 3; it += 1) {
+      for (var ci = 1; ci < cols.length; ci += 1) sweep(cols[ci], 'in');
+      for (var cj = cols.length - 2; cj >= 0; cj -= 1) sweep(cols[cj], 'out');
+    }
+    cols.forEach(function (col) { col.forEach(function (n) { delete n._b; }); });
+    return cols.filter(function (col) { return col.length > 0; });
+  }
+
+  // 1 つの group ブロックを格子に詰める。x / y はブロック内の相対座標（左上が 0,0）
+  function ocPackBlock(nodes, edges, opts) {
+    var o = ocMergeOpts(opts);
+    var columns = [];
+    ocLayerize(nodes, edges).forEach(function (layerNodes) {
+      ocChunk(layerNodes, o.perColumn).forEach(function (chunk) { columns.push(chunk); });
+    });
+    var x = 0, h = 0;
+    columns.forEach(function (col) {
+      var w = col.reduce(function (m, n) { return Math.max(m, n.w); }, 0);
+      var y = 0;
+      col.forEach(function (n) {
+        n.x = x + (w - n.w) / 2;
+        n.y = y;
+        y += n.h + o.gapY;
+      });
+      h = Math.max(h, y - o.gapY);
+      x += w + o.gapX;
+    });
+    return { w: Math.max(0, x - o.gapX), h: Math.max(0, h), columns: columns };
+  }
+
+  // relation が多い group どうしを隣に置く（貪欲）。直前に置いたブロックとの本数を最優先に見る
+  function ocOrderBlocks(blocks, edges) {
+    var groupOf = new Map();
+    blocks.forEach(function (b) { b.nodes.forEach(function (n) { groupOf.set(n.id, b.group); }); });
+    var pair = new Map();
+    var key = function (a, b) { return a + ' ' + b; };
+    (edges || []).forEach(function (e) {
+      var a = groupOf.get(e.from), b = groupOf.get(e.to);
+      if (a === undefined || b === undefined || a === b) return;
+      pair.set(key(a, b), (pair.get(key(a, b)) || 0) + 1);
+      pair.set(key(b, a), (pair.get(key(b, a)) || 0) + 1);
+    });
+
+    // 起点はノード数が最も多いブロック。以降の同点はこの並び（数の多い順 → 名前順）で決まる
+    var rest = blocks.slice().sort(function (a, b) {
+      return (b.nodes.length - a.nodes.length) || (a.group < b.group ? -1 : 1);
+    });
+    var out = [];
+    if (rest.length === 0) return out;
+    out.push(rest.shift());
+    while (rest.length > 0) {
+      var last = out[out.length - 1].group;
+      var best = null;
+      for (var i = 0; i < rest.length; i += 1) {
+        var near = pair.get(key(last, rest[i].group)) || 0;
+        var all = 0;
+        for (var j = 0; j < out.length; j += 1) all += pair.get(key(out[j].group, rest[i].group)) || 0;
+        if (best === null || near > best.near || (near === best.near && all > best.all)) {
+          best = { i: i, near: near, all: all };
+        }
+      }
+      out.push(rest.splice(best.i, 1)[0]);
+    }
+    return out;
+  }
+
+  // ブロックを幅 maxW の行に詰める（ブロック自体は分割しない）。全体の寸法も返す
+  function ocPackRows(blocks, maxW, opts) {
+    var o = ocMergeOpts(opts);
+    var rows = [], row = [], rowW = 0;
+    blocks.forEach(function (b) {
+      if (row.length > 0 && rowW + b.w > maxW) { rows.push(row); row = []; rowW = 0; }
+      row.push(b); rowW += b.w + o.blockGapX;
+    });
+    if (row.length > 0) rows.push(row);
+    var w = 0, h = 0;
+    rows.forEach(function (r) {
+      w = Math.max(w, r.reduce(function (s, b) { return s + b.w + o.blockGapX; }, -o.blockGapX));
+      h += r.reduce(function (m, b) { return Math.max(m, b.h); }, 0) + o.blockGapY;
+    });
+    return { rows: rows, w: w, h: Math.max(0, h - o.blockGapY) };
+  }
+
+  // 1 行 / 2 行 / … を全部試して、全体の縦横比が blockAspect に一番近い詰め方を選ぶ。
+  // 面積から幅を計算するだけだと、背の高いブロックが混ざったときに縦へ伸びてしまう
+  function ocBestRows(blocks, opts) {
+    var o = ocMergeOpts(opts);
+    var total = blocks.reduce(function (s, b) { return s + b.w + o.blockGapX; }, -o.blockGapX);
+    var widest = blocks.reduce(function (m, b) { return Math.max(m, b.w); }, 0);
+    var best = null;
+    for (var k = 1; k <= Math.max(1, blocks.length); k += 1) {
+      var packed = ocPackRows(blocks, Math.max(widest, total / k), o);
+      var ratio = packed.w / Math.max(1, packed.h);
+      var score = Math.abs(Math.log(ratio / o.blockAspect));
+      if (best === null || score < best.score - 1e-9) best = { score: score, packed: packed };
+    }
+    return best ? best.packed : { rows: [], w: 0, h: 0 };
+  }
+
+  // 概念図 / ER の配置。ハブを上端の一列に逃がし、残りを group ブロックの格子に並べる
+  function ocLayoutGraph(nodes, edges, opts) {
+    var o = ocMergeOpts(opts);
+    if (nodes.length === 0) return { hubs: [], blocks: [] };
+    var hubs = ocPickHubs(nodes, edges, o);
+    var hubIds = new Set(hubs.map(function (n) { return n.id; }));
+
+    var byGroup = new Map(), order = [];
+    nodes.forEach(function (n) {
+      if (hubIds.has(n.id)) return;
+      var g = ocGroupOf(n);
+      if (!byGroup.has(g)) { byGroup.set(g, []); order.push(g); }
+      byGroup.get(g).push(n);
+    });
+    var blocks = order.map(function (g) { return { group: g, nodes: byGroup.get(g) }; });
+    // ハブに刺さる線は層の計算に使わない（全ブロックが 1 本の鎖につながってしまう）
+    var innerEdges = (edges || []).filter(function (e) {
+      return !hubIds.has(e.from) && !hubIds.has(e.to);
+    });
+    blocks.forEach(function (b) {
+      var size = ocPackBlock(b.nodes, innerEdges, o);
+      b.w = size.w + o.blockPad * 2;
+      b.h = size.h + o.blockPad * 2 + o.blockLabelH;
+    });
+
+    var ordered = ocOrderBlocks(blocks, innerEdges);
+    var hubH = hubs.reduce(function (m, n) { return Math.max(m, n.h); }, 0);
+    var top = hubs.length > 0 ? hubH + o.hubGapY : 0;
+    var y = top, totalW = 0;
+    ocBestRows(ordered, o).rows.forEach(function (r) {
+      var x = 0, rowH = 0;
+      r.forEach(function (b) {
+        b.x = x; b.y = y;
+        b.nodes.forEach(function (n) {
+          n.x += b.x + o.blockPad;
+          n.y += b.y + o.blockPad + o.blockLabelH;
+        });
+        rowH = Math.max(rowH, b.h);
+        x += b.w + o.blockGapX;
+      });
+      totalW = Math.max(totalW, x - o.blockGapX);
+      y += rowH + o.blockGapY;
+    });
+
+    var hubW = hubs.reduce(function (s, n) { return s + n.w + o.hubGapX; }, -o.hubGapX);
+    var hx = Math.max(0, (totalW - hubW) / 2);
+    hubs.forEach(function (n) { n.x = hx; n.y = 0; hx += n.w + o.hubGapX; });
+    return { hubs: hubs, blocks: ordered };
+  }
+
+  // 画面ビュー: 渡された順で横一列。枚数が多いときだけ折り返す
+  function ocLayoutRow(nodes, opts) {
+    var o = ocMergeOpts(opts);
+    var perLine = nodes.length > o.rowWrapOver ? o.rowPerLine : Math.max(1, nodes.length);
+    var y = 0;
+    ocChunk(nodes, perLine).forEach(function (line) {
+      var maxH = line.reduce(function (m, n) { return Math.max(m, n.h); }, 0);
+      var x = 0;
+      line.forEach(function (n) {
+        n.x = x; n.y = y + (maxH - n.h) / 2;
+        x += n.w + o.rowGapX;
+      });
+      y += maxH + o.rowGapY;
+    });
+  }
+
+  // 今のノード位置から group ブロックの枠を作る。保存位置で復元したときにも同じ枠が出る
+  function ocBlockFrames(nodes, hubIds, opts) {
+    var o = ocMergeOpts(opts);
+    var byGroup = new Map(), order = [];
+    nodes.forEach(function (n) {
+      if (hubIds && hubIds.has(n.id)) return;
+      var g = ocGroupOf(n);
+      if (!byGroup.has(g)) {
+        byGroup.set(g, { group: g, color: (n.data && n.data.group) || null, x1: Infinity, y1: Infinity, x2: -Infinity, y2: -Infinity });
+        order.push(g);
+      }
+      var b = byGroup.get(g);
+      b.x1 = Math.min(b.x1, n.x); b.y1 = Math.min(b.y1, n.y);
+      b.x2 = Math.max(b.x2, n.x + n.w); b.y2 = Math.max(b.y2, n.y + n.h);
+    });
+    return order.map(function (g) {
+      var b = byGroup.get(g);
+      return {
+        group: b.group, color: b.color,
+        x: b.x1 - o.blockPad,
+        y: b.y1 - o.blockPad - o.blockLabelH,
+        w: (b.x2 - b.x1) + o.blockPad * 2,
+        h: (b.y2 - b.y1) + o.blockPad * 2 + o.blockLabelH,
+        labelY: b.y1 - o.blockPad - o.blockLabelH / 2
+      };
+    });
+  }
+  /* === oc-layout:end === */
+
+  function autoLayout(scene) {
+    if (scene.view === 'screens') ocLayoutRow(screenOrder(scene));
+    else ocLayoutGraph(scene.nodes, scene.edges);
+  }
+
+  // 画面の並び順: flows をたどった順（入次数 0 から）。残りは配列順
+  function screenOrder(scene) {
+    var order = [], seen = new Set();
+    var outs = new Map(scene.nodes.map(function (n) { return [n.id, []]; }));
+    var indeg = new Map(scene.nodes.map(function (n) { return [n.id, 0]; }));
+    scene.edges.forEach(function (e) {
+      outs.get(e.from).push(e.to);
+      indeg.set(e.to, indeg.get(e.to) + 1);
+    });
+    var walk = function (id) {
+      if (seen.has(id)) return;
+      seen.add(id); order.push(scene.byId.get(id));
+      outs.get(id).forEach(walk);
+    };
+    scene.nodes.forEach(function (n) { if (indeg.get(n.id) === 0) walk(n.id); });
+    scene.nodes.forEach(function (n) { walk(n.id); });
+    return order;
+  }
+
+  // ===== 位置の保存（ビューごと。キーは title + view）=====
+  // v2 は配置の世代。自動配置を作り替えたときに上げる（古い配置が復元されて変更が見えないのを防ぐ）
+  var storeKey = function (view) { return 'oc:v2:' + MODEL.title + ':' + view; };
+  function savePositions(scene) {
+    try {
+      var out = {};
+      scene.nodes.forEach(function (n) { out[n.id] = [round(n.x), round(n.y)]; });
+      localStorage.setItem(storeKey(scene.view), JSON.stringify(out));
+    } catch (err) { /* プライベートモードなどで保存できないときは黙って諦める */ }
+  }
+  function loadPositions(scene) {
+    var raw = null;
+    try { raw = localStorage.getItem(storeKey(scene.view)); } catch (err) { return false; }
+    if (!raw) return false;
+    var saved;
+    try { saved = JSON.parse(raw); } catch (err) { return false; }
+    var hit = 0;
+    scene.nodes.forEach(function (n) {
+      var p = saved[n.id];
+      if (Array.isArray(p) && typeof p[0] === 'number' && typeof p[1] === 'number') {
+        n.x = p[0]; n.y = p[1]; hit += 1;
+      }
+    });
+    return hit === scene.nodes.length && hit > 0;
+  }
+
+  // ===== 描画 =====
+  function nodeHtml(scene, n) {
+    var body;
+    if (scene.view === 'concept') body = conceptBody(n);
+    else if (scene.view === 'er') body = erBody(n);
+    else body = screenBody(n);
+    return '<g class="oc-node" data-id="' + esc(n.id) + '" transform="translate(' + round(n.x) + ' ' + round(n.y) + ')">'
+      + body + '</g>';
+  }
+
+  function conceptBody(n) {
+    var e = n.data;
+    return '<rect class="oc-box' + groupClass(e.group) + '" width="' + n.w + '" height="' + n.h + '" rx="10"></rect>'
+      + '<text class="oc-node-title" x="' + (n.w / 2) + '" y="' + (n.h / 2) + '" text-anchor="middle" dominant-baseline="central">'
+      + esc(e.label) + '</text>';
+  }
+
+  function erBody(n) {
+    var e = n.data, attrs = e.attributes || [];
+    var out = '<rect class="oc-box" width="' + n.w + '" height="' + n.h + '" rx="10"></rect>'
+      + '<path class="oc-er-head' + groupClass(e.group) + '" d="' + headPath(n.w, SIZE.erHead, 10) + '"></path>'
+      + '<text class="oc-node-title" x="' + SIZE.erPadX + '" y="' + (SIZE.erHead / 2) + '" dominant-baseline="central" style="font-size:14px">'
+      + esc(e.label) + '</text>'
+      + '<text class="oc-node-sub" x="' + (n.w - SIZE.erPadX) + '" y="' + (SIZE.erHead / 2) + '" text-anchor="end" dominant-baseline="central">'
+      + esc(e.id) + '</text>'
+      + '<line class="oc-er-sep" x1="0" y1="' + SIZE.erHead + '" x2="' + n.w + '" y2="' + SIZE.erHead + '"></line>';
+    attrs.forEach(function (a, i) {
+      var y = SIZE.erHead + SIZE.erPadY + SIZE.erRow * i + SIZE.erRow / 2;
+      var right = a.type ? esc(a.type) : '';
+      if (a.fk) right += (right ? '  ' : '') + '&#8594; ' + esc(a.fk);
+      // pk は鍵の印（丸 + 軸）。フォントに依存させないため線で描く
+      var key = a.pk
+        ? '<g transform="translate(' + (SIZE.erPadX + 1) + ' ' + y + ')">'
+          + '<circle class="oc-key" cx="0" cy="0" r="3"></circle>'
+          + '<path class="oc-key" d="M3 0 h7 M8 0 v3"></path></g>'
+        : '';
+      out += key
+        + '<text class="oc-attr" x="' + (SIZE.erPadX + 18) + '" y="' + y + '" dominant-baseline="central">' + esc(a.name) + '</text>'
+        + '<text class="oc-attr-type" x="' + (n.w - SIZE.erPadX) + '" y="' + y + '" dominant-baseline="central">' + right + '</text>';
+    });
+    return out;
+  }
+
+  // 上だけ角丸の帯
+  function headPath(w, h, r) {
+    return 'M0 ' + h + ' V' + r + ' a' + r + ' ' + r + ' 0 0 1 ' + r + ' -' + r
+      + ' H' + (w - r) + ' a' + r + ' ' + r + ' 0 0 1 ' + r + ' ' + r + ' V' + h + ' Z';
+  }
+
+  function screenBody(n) {
+    var s = n.data;
+    var W = s.width || 1440, H = s.height || 1024;
+    var clipId = 'oc-clip-' + s.id;
+    var inner = s.image
+      ? '<image href="' + esc(s.image) + '" x="0" y="0" width="' + W + '" height="' + H + '" preserveAspectRatio="xMidYMin slice"></image>'
+      : wireframe(s, W, H);
+    return '<text class="oc-frame-label" x="0" y="-12">' + esc(s.label) + '</text>'
+      + (s.route ? '<text class="oc-frame-route" x="' + (textWidth(s.label, 15) + 12) + '" y="-12">' + esc(s.route) + '</text>' : '')
+      + '<clipPath id="' + esc(clipId) + '"><rect x="0" y="0" width="' + n.w + '" height="' + n.h + '" rx="6"></rect></clipPath>'
+      + '<rect class="oc-frame" x="0" y="0" width="' + n.w + '" height="' + n.h + '" rx="6"></rect>'
+      + '<g clip-path="url(#' + esc(clipId) + ')"><g transform="scale(' + SIZE.screenScale + ')">' + inner + '</g></g>';
+  }
+
+  // image が無いときの簡易ワイヤー。画面の中身を縦に積むだけ
+  function wireframe(s, W, H) {
+    var blocks = s.blocks || [];
+    var pad = 40, y = 0, out = '';
+    var band = function (x, yy, w, h, cls, label, size, anchorLeft) {
+      var t = '';
+      if (label) {
+        t = '<text class="' + (size >= 28 ? 'oc-wire-title' : 'oc-wire-text') + '" x="'
+          + (anchorLeft ? x + 24 : x + w / 2) + '" y="' + (yy + h / 2) + '" dominant-baseline="central"'
+          + (anchorLeft ? '' : ' text-anchor="middle"') + '>' + esc(label) + '</text>';
+      }
+      return '<rect class="' + cls + '" x="' + x + '" y="' + yy + '" width="' + w + '" height="' + h + '" rx="8"></rect>' + t;
+    };
+
+    blocks.forEach(function (b) {
+      var kind = b.kind, label = b.label || '';
+      var w = W - pad * 2;
+      if (kind === 'header') {
+        out += band(0, y, W, 96, 'oc-wire', label, 30, true);
+        y += 96 + pad;
+      } else if (kind === 'toolbar' || kind === 'filter' || kind === 'tabs' || kind === 'search') {
+        out += band(pad, y, w, 60, 'oc-wire-soft', label, 22, true);
+        y += 60 + 24;
+      } else if (kind === 'table' || kind === 'list') {
+        var cols = b.columns || [];
+        var rows = 6, rowH = 52;
+        out += band(pad, y, w, 48, 'oc-wire', '', 22);
+        cols.forEach(function (c, i) {
+          var cw = w / Math.max(cols.length, 1);
+          out += '<text class="oc-wire-text" x="' + (pad + cw * i + 16) + '" y="' + (y + 24)
+            + '" dominant-baseline="central">' + esc(c) + '</text>';
+        });
+        for (var i = 0; i < rows; i += 1) {
+          var ry = y + 48 + rowH * i;
+          out += '<line class="oc-wire-line" x1="' + pad + '" y1="' + (ry + rowH) + '" x2="' + (pad + w) + '" y2="' + (ry + rowH) + '"></line>';
+          var n2 = Math.max(cols.length, 3);
+          for (var j = 0; j < n2; j += 1) {
+            var cw2 = w / n2;
+            out += '<rect class="oc-wire-soft" x="' + (pad + cw2 * j + 16) + '" y="' + (ry + 18) + '" width="' + (cw2 * 0.6) + '" height="16" rx="8"></rect>';
+          }
+        }
+        y += 48 + rowH * rows + pad;
+      } else if (kind === 'form') {
+        var fields = b.columns || ['', '', '', ''];
+        fields.forEach(function (f, i) {
+          var fy = y + i * 92;
+          out += '<text class="oc-wire-text" x="' + pad + '" y="' + (fy + 14) + '" dominant-baseline="central">' + esc(f) + '</text>';
+          out += '<rect class="oc-wire-soft" x="' + pad + '" y="' + (fy + 30) + '" width="' + (w * 0.6) + '" height="44" rx="8"></rect>';
+        });
+        y += fields.length * 92 + pad;
+      } else if (kind === 'button') {
+        out += band(pad, y, 220, 56, 'oc-wire-accent', label, 22);
+        y += 56 + 24;
+      } else if (kind === 'text') {
+        for (var k = 0; k < 3; k += 1) {
+          out += '<rect class="oc-wire-soft" x="' + pad + '" y="' + (y + k * 32) + '" width="' + (w * (k === 2 ? 0.5 : 0.9)) + '" height="18" rx="9"></rect>';
+        }
+        y += 3 * 32 + 16;
+      } else if (kind === 'footer') {
+        out += band(0, H - 88, W, 88, 'oc-wire-soft', label, 22, true);
+      } else {
+        // card / panel / detail / chart / calendar / 未知の kind
+        out += band(pad, y, w, 240, 'oc-wire-soft', label, 22, true);
+        y += 240 + 24;
+      }
+    });
+    return out;
+  }
+
+  // 線の端点（箱の枠との交点）
+  function borderPoint(n, tx, ty) {
+    var cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+    var dx = tx - cx, dy = ty - cy;
+    if (dx === 0 && dy === 0) return { x: cx, y: cy };
+    var sx = dx === 0 ? Infinity : (n.w / 2) / Math.abs(dx);
+    var sy = dy === 0 ? Infinity : (n.h / 2) / Math.abs(dy);
+    var s = Math.min(sx, sy);
+    return { x: cx + dx * s, y: cy + dy * s };
+  }
+
+  function edgeGeom(scene, e) {
+    var a = scene.byId.get(e.from), b = scene.byId.get(e.to);
+    var ac = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
+    var bc = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+    var p1 = borderPoint(a, bc.x, bc.y);
+    var p2 = borderPoint(b, ac.x, ac.y);
+    var vx = p2.x - p1.x, vy = p2.y - p1.y;
+    var len = Math.sqrt(vx * vx + vy * vy) || 1;
+    var ux = vx / len, uy = vy / len;
+    var nx = -uy, ny = ux;              // 線に直交する向き（記号をずらす）
+    var d = 'M' + round(p1.x) + ' ' + round(p1.y) + ' L' + round(p2.x) + ' ' + round(p2.y);
+    return {
+      d: d,
+      mid: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 - 4 },
+      c1: { x: p1.x + ux * 18 + nx * 11, y: p1.y + uy * 18 + ny * 11 },
+      c2: { x: p2.x - ux * 22 + nx * 11, y: p2.y - uy * 22 + ny * 11 }
+    };
+  }
+
+  function isHubEdge(scene, e) { return scene.hubs.has(e.from) || scene.hubs.has(e.to); }
+
+  function edgeHtml(scene, e) {
+    var g = edgeGeom(scene, e);
+    // ハブ宛の線は本数が多い。ラベルと多重度を省き、細く薄くしてホバーのときだけ強調する
+    if (isHubEdge(scene, e)) {
+      return '<g class="oc-edge oc-edge-hub" data-eid="' + esc(e.id) + '">'
+        + '<path class="oc-line" d="' + g.d + '" marker-end="url(#oc-arrow)"></path></g>';
+    }
+    var cards = e.card ? String(e.card).split(':') : null;
+    return '<g class="oc-edge" data-eid="' + esc(e.id) + '">'
+      + '<path class="oc-line" d="' + g.d + '" marker-end="url(#oc-arrow)"></path>'
+      + (e.label ? '<text class="oc-edge-label" x="' + round(g.mid.x) + '" y="' + round(g.mid.y) + '">' + esc(e.label) + '</text>' : '')
+      + (cards ? '<text class="oc-card" x="' + round(g.c1.x) + '" y="' + round(g.c1.y) + '">' + esc(cards[0]) + '</text>'
+        + '<text class="oc-card" x="' + round(g.c2.x) + '" y="' + round(g.c2.y) + '">' + esc(cards[1]) + '</text>' : '')
+      + '</g>';
+  }
+
+  // group ブロックの枠と名前。ノード位置から作るので、ドラッグ後も保存位置の復元後も追従する
+  function blocksHtml(scene) {
+    if (scene.view === 'screens') return '';
+    scene.frames = ocBlockFrames(scene.nodes, scene.hubs, null);
+    return scene.frames.map(function (b) {
+      return '<g class="oc-block">'
+        + '<rect class="oc-block-box' + (b.color ? ' oc-block-' + ((groupOrder.indexOf(b.color) % 6) + 1) : '')
+        + '" x="' + round(b.x) + '" y="' + round(b.y) + '" width="' + round(b.w) + '" height="' + round(b.h) + '" rx="14"></rect>'
+        + '<text class="oc-block-label" x="' + round(b.x + 16) + '" y="' + round(b.labelY) + '" dominant-baseline="central">'
+        + esc(b.group) + '</text></g>';
+    }).join('');
+  }
+
+  function renderBlocks(scene) {
+    if (!scene.layer) return;
+    var g = scene.layer.querySelector('.oc-blocks');
+    if (g) g.innerHTML = blocksHtml(scene);
+  }
+
+  function renderScene(scene) {
+    var layer = document.querySelector('.oc-layer[data-view="' + scene.view + '"]');
+    var html = '<g class="oc-blocks">' + blocksHtml(scene) + '</g><g class="oc-edges">';
+    scene.edges.forEach(function (e) { html += edgeHtml(scene, e); });
+    html += '</g><g class="oc-nodes">';
+    scene.nodes.forEach(function (n) { html += nodeHtml(scene, n); });
+    html += '</g>';
+    layer.innerHTML = html;
+
+    // 要素の参照を控えておく（ドラッグ中は再生成せず属性だけ書き換える）
+    var els = { nodes: new Map(), edges: new Map() };
+    layer.querySelectorAll('.oc-node').forEach(function (g) { els.nodes.set(g.dataset.id, g); });
+    layer.querySelectorAll('.oc-edge').forEach(function (g) {
+      els.edges.set(g.dataset.eid, {
+        g: g,
+        path: g.querySelector('.oc-line'),
+        label: g.querySelector('.oc-edge-label'),
+        cards: g.querySelectorAll('.oc-card')
+      });
+    });
+    scene.el = els;
+    scene.layer = layer;
+  }
+
+  function updateNode(scene, n) {
+    var g = scene.el.nodes.get(n.id);
+    g.setAttribute('transform', 'translate(' + round(n.x) + ' ' + round(n.y) + ')');
+    scene.adj.get(n.id).forEach(function (e) {
+      var geom = edgeGeom(scene, e);
+      var ref = scene.el.edges.get(e.id);
+      ref.path.setAttribute('d', geom.d);
+      if (ref.label) { ref.label.setAttribute('x', round(geom.mid.x)); ref.label.setAttribute('y', round(geom.mid.y)); }
+      if (ref.cards.length === 2) {
+        ref.cards[0].setAttribute('x', round(geom.c1.x)); ref.cards[0].setAttribute('y', round(geom.c1.y));
+        ref.cards[1].setAttribute('x', round(geom.c2.x)); ref.cards[1].setAttribute('y', round(geom.c2.y));
+      }
+    });
+  }
+
+  // ===== ビュー管理 =====
+  var scenes = {};
+  VIEWS.forEach(function (v) {
+    var scene = buildScene(v);
+    if (!loadPositions(scene)) autoLayout(scene);
+    scene.cam = null;
+    scenes[v] = scene;
+    renderScene(scene);
+  });
+
+  var stage = document.getElementById('oc-stage');
+  var svg = document.getElementById('oc-svg');
+  var viewport = document.getElementById('oc-viewport');
+  var zoomValue = document.getElementById('oc-zoom-value');
+  var current = 'screens';
+  var cam = { k: 1, x: 0, y: 0 };
+
+  function applyCam() {
+    viewport.setAttribute('transform', 'translate(' + round(cam.x) + ' ' + round(cam.y) + ') scale(' + cam.k + ')');
+    zoomValue.textContent = Math.round(cam.k * 100) + '%';
+    var grid = 24 * cam.k;
+    stage.style.backgroundSize = grid + 'px ' + grid + 'px';
+    stage.style.backgroundPosition = (cam.x % grid) + 'px ' + (cam.y % grid) + 'px';
+  }
+
+  function bbox(scene) {
+    if (scene.nodes.length === 0) return { x: 0, y: 0, w: 1, h: 1 };
+    var x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    scene.nodes.forEach(function (n) {
+      x1 = Math.min(x1, n.x); y1 = Math.min(y1, n.y - 34);
+      x2 = Math.max(x2, n.x + n.w); y2 = Math.max(y2, n.y + n.h);
+    });
+    (scene.frames || []).forEach(function (b) {
+      x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y);
+      x2 = Math.max(x2, b.x + b.w); y2 = Math.max(y2, b.y + b.h);
+    });
+    return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+  }
+
+  function showBox(b, pad) {
+    var vw = stage.clientWidth, vh = stage.clientHeight;
+    var k = Math.min((vw - pad * 2) / b.w, (vh - pad * 2) / b.h, 1);
+    k = Math.max(k, 0.08);
+    cam.k = k;
+    cam.x = (vw - b.w * k) / 2 - b.x * k;
+    cam.y = (vh - b.h * k) / 2 - b.y * k;
+    applyCam();
+  }
+
+  function fit(scene) { showBox(bbox(scene), 80); }
+
+  // 初期表示。ノードが多いときは全体ではなく最初の group ブロックに寄せる
+  // （全体に合わせるとズームが 10% 台まで落ちて、ラベルが読めなくなる）
+  function fitStart(scene) {
+    var frames = scene.frames || [];
+    if (scene.nodes.length <= 30 || frames.length === 0) { fit(scene); return; }
+    var first = frames.slice().sort(function (a, b) { return (a.y - b.y) || (a.x - b.x); })[0];
+    showBox({ x: first.x, y: first.y, w: first.w, h: first.h }, 60);
+  }
+
+  function setView(view) {
+    if (VIEWS.indexOf(view) === -1) return;
+    if (view !== current) scenes[current].cam = { k: cam.k, x: cam.x, y: cam.y };
+    current = view;
+    VIEWS.forEach(function (v) {
+      scenes[v].layer.classList.toggle('is-active', v === view);
+    });
+    var saved = scenes[view].cam;
+    if (saved) { cam = { k: saved.k, x: saved.x, y: saved.y }; applyCam(); } else { fitStart(scenes[view]); }
+    document.getElementById('oc-menu-current').textContent = VIEW_LABEL[view];
+    document.querySelectorAll('.oc-menu-item[data-act="view"]').forEach(function (b) {
+      b.querySelector('.oc-check').textContent = b.dataset.view === view ? '✓' : '';
+    });
+    // URL の # に現在ビューを残す（#concept で開けば概念図から始まる）
+    try { history.replaceState(null, '', '#' + view); } catch (err) { /* file:// で拒否されても実害なし */ }
+  }
+
+  // ===== メニュー =====
+  var menu = document.getElementById('oc-menu');
+  var menuBtn = document.getElementById('oc-menu-btn');
+  menuBtn.addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    var open = menu.classList.toggle('is-open');
+    menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', function () {
+    menu.classList.remove('is-open');
+    menuBtn.setAttribute('aria-expanded', 'false');
+  });
+  menu.addEventListener('click', function (ev) {
+    var item = ev.target.closest('.oc-menu-item');
+    if (!item) return;
+    if (item.dataset.act === 'view') setView(item.dataset.view);
+    else relayout();
+    menu.classList.remove('is-open');
+  });
+
+  function relayout() {
+    var scene = scenes[current];
+    autoLayout(scene);
+    renderScene(scene);
+    scene.layer.classList.add('is-active');
+    savePositions(scene);
+    fitStart(scene);
+  }
+
+  document.getElementById('oc-fit-all').addEventListener('click', function () { fit(scenes[current]); });
+
+  // ===== ズーム =====
+  function zoomAt(cx, cy, factor) {
+    var k2 = Math.min(3, Math.max(0.08, cam.k * factor));
+    var f = k2 / cam.k;
+    cam.x = cx - (cx - cam.x) * f;
+    cam.y = cy - (cy - cam.y) * f;
+    cam.k = k2;
+    applyCam();
+  }
+  document.getElementById('oc-zoom-in').addEventListener('click', function () {
+    zoomAt(stage.clientWidth / 2, stage.clientHeight / 2, 1.2);
+  });
+  document.getElementById('oc-zoom-out').addEventListener('click', function () {
+    zoomAt(stage.clientWidth / 2, stage.clientHeight / 2, 1 / 1.2);
+  });
+  stage.addEventListener('wheel', function (ev) {
+    if (ev.ctrlKey || ev.metaKey) {
+      ev.preventDefault();
+      zoomAt(ev.clientX, ev.clientY, Math.exp(-ev.deltaY * 0.0022));
+    } else {
+      // 素のホイールは普通のスクロールとしてパンに使う
+      ev.preventDefault();
+      cam.x -= ev.deltaX; cam.y -= ev.deltaY;
+      applyCam();
+    }
+  }, { passive: false });
+
+  // ===== パンとノードのドラッグ =====
+  var drag = null;
+  svg.addEventListener('pointerdown', function (ev) {
+    if (ev.button !== 0) return;
+    var g = ev.target.closest ? ev.target.closest('.oc-node') : null;
+    var scene = scenes[current];
+    if (g && scene.byId.has(g.dataset.id)) {
+      var n = scene.byId.get(g.dataset.id);
+      drag = { kind: 'node', node: n, sx: ev.clientX, sy: ev.clientY, ox: n.x, oy: n.y };
+      g.classList.add('is-dragging');
+      hideTip();
+    } else {
+      drag = { kind: 'pan', sx: ev.clientX, sy: ev.clientY, ox: cam.x, oy: cam.y };
+      stage.classList.add('is-panning');
+    }
+    // 合成イベントなど、捕捉できない pointer でもドラッグ自体は続行させる
+    try { svg.setPointerCapture(ev.pointerId); } catch (err) { /* 捕捉できないだけ */ }
+  });
+  svg.addEventListener('pointermove', function (ev) {
+    if (!drag) return;
+    var dx = ev.clientX - drag.sx, dy = ev.clientY - drag.sy;
+    if (drag.kind === 'pan') {
+      cam.x = drag.ox + dx; cam.y = drag.oy + dy;
+      applyCam();
+    } else {
+      drag.node.x = drag.ox + dx / cam.k;
+      drag.node.y = drag.oy + dy / cam.k;
+      updateNode(scenes[current], drag.node);
+    }
+  });
+  var endDrag = function () {
+    if (!drag) return;
+    if (drag.kind === 'node') {
+      var g = scenes[current].el.nodes.get(drag.node.id);
+      if (g) g.classList.remove('is-dragging');
+      savePositions(scenes[current]);
+      renderBlocks(scenes[current]); // 動かしたノードに合わせて group の枠を作り直す
+    }
+    stage.classList.remove('is-panning');
+    drag = null;
+  };
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+
+  // ===== ホバー: 関連のハイライトと、entity を触る画面の逆引き =====
+  var tip = document.getElementById('oc-tip');
+  function hideTip() { tip.style.display = 'none'; }
+  svg.addEventListener('mousemove', function (ev) {
+    if (tip.style.display === 'block') {
+      tip.style.left = Math.min(ev.clientX + 14, window.innerWidth - tip.offsetWidth - 8) + 'px';
+      tip.style.top = Math.min(ev.clientY + 16, window.innerHeight - tip.offsetHeight - 8) + 'px';
+    }
+  });
+  svg.addEventListener('mouseover', function (ev) {
+    var g = ev.target.closest ? ev.target.closest('.oc-node') : null;
+    if (!g) return;
+    var scene = scenes[current];
+    var n = scene.byId.get(g.dataset.id);
+    if (!n) return;
+    g.classList.add('is-hot');
+    scene.adj.get(n.id).forEach(function (e) {
+      var ref = scene.el.edges.get(e.id);
+      if (ref) ref.g.classList.add('is-hot');
+      var other = e.from === n.id ? e.to : e.from;
+      var og = scene.el.nodes.get(other);
+      if (og) og.classList.add('is-hot');
+    });
+    if (current === 'screens') return;
+    var list = screensOf.get(n.id) || [];
+    tip.innerHTML = '<b>' + esc(n.data.label) + '</b>'
+      + (list.length
+        ? '<div class="oc-tip-muted">この概念を扱う画面</div>' + list.map(function (s) {
+          return esc(s.label) + (s.route ? ' <span class="oc-tip-muted">' + esc(s.route) + '</span>' : '');
+        }).join('<br>')
+        : '<div class="oc-tip-muted">この概念を扱う画面は登録されていない</div>');
+    tip.style.display = 'block';
+    tip.style.left = (ev.clientX + 14) + 'px';
+    tip.style.top = (ev.clientY + 16) + 'px';
+  });
+  svg.addEventListener('mouseout', function (ev) {
+    var g = ev.target.closest ? ev.target.closest('.oc-node') : null;
+    if (!g) return;
+    var scene = scenes[current];
+    scene.layer.querySelectorAll('.is-hot').forEach(function (n) { n.classList.remove('is-hot'); });
+    hideTip();
+  });
+
+  // ===== キーボード =====
+  document.addEventListener('keydown', function (ev) {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.key === '1') setView('screens');
+    else if (ev.key === '2') setView('concept');
+    else if (ev.key === '3') setView('er');
+    else if (ev.key === 'r' || ev.key === 'R') relayout();
+  });
+  window.addEventListener('resize', function () { applyCam(); });
+
+  // ===== 初期表示 =====
+  document.getElementById('oc-title').textContent = MODEL.title;
+  document.getElementById('oc-counts').textContent =
+    SCREENS.length + ' 画面 / ' + ENTITIES.length + ' entity / ' + RELATIONS.length + ' relation';
+  var wanted = (location.hash || '').slice(1);
+  setView(VIEWS.indexOf(wanted) >= 0 ? wanted : (SCREENS.length > 0 ? 'screens' : 'concept'));
+}());
+</script>
+</body>
+</html>

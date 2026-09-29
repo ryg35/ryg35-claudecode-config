@@ -2,8 +2,8 @@
 name: architect
 description: Software architecture specialist for system design, scalability, and technical decision-making. Use PROACTIVELY when planning new features, refactoring large systems, or making architectural decisions.
 tools: ["Read", "Grep", "Glob"]
-model: claude-opus-5
-effort: high
+model: claude-opus-5-5
+effort: medium
 ---
 
 ## Routing (Sol-centric)
@@ -14,7 +14,7 @@ Default execution path for this role is Codex, not the Claude `Agent` tool:
 Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '<this file's instructions> + <the architecture task>'")
 ```
 
-Cost is not a constraint; Sol is the default because it is the fastest and most accurate option available for design work. Use the Claude `Agent(architect, model=opus)` path (this file's `model: opus` frontmatter) only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach.
+Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(architect)` path only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach.
 
 Everything below this line is the role definition/prompt handed to whichever backend (Codex or Claude) executes it.
 

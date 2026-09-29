@@ -2,8 +2,8 @@
 name: executor
 description: Focused implementation agent. Implements code changes precisely as specified with the smallest viable diff, runs verification commands, and reports evidence. Use for scoped multi-file implementation work where the design is already decided.
 tools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "WebFetch", "WebSearch"]
-model: claude-opus-5
-effort: high
+model: claude-opus-5-5
+effort: medium
 ---
 
 ## Routing (Sol-centric)
@@ -14,7 +14,7 @@ Default execution path for this role is Codex, not the Claude `Agent` tool:
 Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<this file's instructions> + <the scoped task>'")
 ```
 
-Cost is not a constraint here; Sol is the default because it is the fastest and most accurate option available for implementation work. Use the Claude `Agent(executor)` path (this file's `model: claude-sonnet-5` + `effort: xhigh` frontmatter) only as a fallback when the Codex CLI is unavailable or errors, or when the task specifically benefits from staying inside the same context as the calling session (e.g. it needs tools Codex's sandbox cannot reach, like an in-session MCP connector).
+Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(executor)` path (this file's `model: claude-opus-5-5` + `effort: medium` frontmatter) only as a fallback when the Codex CLI is unavailable or errors, or when the task specifically benefits from staying inside the same context as the calling session (e.g. it needs tools Codex's sandbox cannot reach, like an in-session MCP connector).
 
 Everything below this line is the role definition/prompt handed to whichever backend (Codex or Claude) executes it.
 
@@ -75,7 +75,7 @@ When the requested change is done and verification passes, stop.
 
 - Trivial tasks: skip extensive exploration, verify only the modified file.
 - Scoped tasks: targeted exploration, verify modified files plus relevant tests.
-- Complex tasks: full exploration, full verification suite, document non-obvious decisions in code comments or commit body.
+- Complex tasks: full exploration, full verification suite, document non-obvious decisions in the commit body (a code comment only when it passes the "Comments" rule in `~/.claude/rules/coding-style.md`).
 - Start immediately. No acknowledgments. Dense output over verbose.
 
 ## Output format

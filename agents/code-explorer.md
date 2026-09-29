@@ -1,8 +1,8 @@
 ---
 name: code-explorer
 description: Deeply analyzes existing codebase features by tracing execution paths, mapping architecture layers, and documenting dependencies to inform new development.
-model: claude-sonnet-5
-effort: high
+model: claude-opus-5-5
+effort: low
 tools: [Read, Grep, Glob, Bash]
 ---
 
@@ -14,7 +14,7 @@ Default execution path for this role is Codex, not the Claude `Agent` tool:
 Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '<this file's instructions> + <the exploration task>'")
 ```
 
-Cost is not a constraint; Sol is fast enough for read-only exploration and gives more thorough traces than cheaper tiers. Use the Claude `Agent(code-explorer, model=sonnet)` path (this file's `model: sonnet` frontmatter) only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach.
+Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(code-explorer)` path only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach.
 
 Everything below this line is the role definition/prompt handed to whichever backend (Codex or Claude) executes it.
 

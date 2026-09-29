@@ -118,22 +118,27 @@ STD_OUT=/tmp/codex-review-standard-${SLUG}-$$.md
 ADV_OUT=/tmp/codex-review-adversarial-${SLUG}-$$.md
 
 # 1. Standard review: `review --base` takes NO prompt
-Bash(command="~/.claude/scripts/codex-exec-bg.sh review --base <base> --full-auto --ephemeral -o $STD_OUT", run_in_background=true)
+Bash(command="~/.claude/scripts/codex-exec-bg.sh review --base <base> --ephemeral -o $STD_OUT", run_in_background=true)
 
 # 2. Adversarial review: plain exec prompt, base branch named in the prompt text
 Bash(command="~/.claude/scripts/codex-exec-bg.sh --sandbox read-only --ephemeral -o $ADV_OUT 'Adversarial code review. Run: git diff <base>...HEAD in this repo and critically examine design decisions, trade-offs, failure modes, and security concerns. Report findings with severity CRITICAL/HIGH/MEDIUM/LOW and file:line references.'", run_in_background=true)
 ```
 
-**CLI constraint (verified on codex-cli 0.144.1, 2026-07-17):** `codex exec
-review` rejects `--base <BRANCH>` together with `[PROMPT]`
-(`error: the argument '--base <BRANCH>' cannot be used with '[PROMPT]'`), even
-though the usage string lists both. So: standard review = `--base` alone,
-adversarial review = prompt alone.
+**CLI constraints:**
+- codex-cli 0.144.1, 2026-07-17: `codex exec review` rejects `--base <BRANCH>`
+  together with `[PROMPT]` (`the argument '--base <BRANCH>' cannot be used with
+  '[PROMPT]'`), even though the usage string lists both. So: standard review =
+  `--base` alone, adversarial review = prompt alone.
+- codex-cli 0.154.0, 2026-09-24: `--full-auto` is gone (`unexpected argument
+  '--full-auto'`, exit 2). Never add it back. `exec review` also has no
+  `--sandbox` flag; it needs none, since it only reads the diff. The adversarial
+  path keeps `--sandbox read-only` (still valid). Both commands above were run
+  on 0.154.0 and produced a non-empty `-o` file.
 
-Flags: `--full-auto` bypasses Codex approval prompts, `--ephemeral` keeps no
-session files, `-o <file>` writes the final message for Phase C to read.
-Do not swallow stderr with `2>/dev/null`. `exit 2` from codex means a bad flag
-combination, and you want to see it.
+Flags: `--ephemeral` keeps no session files, `-o <file>` writes the final
+message for Phase C to read. Do not swallow stderr with `2>/dev/null`: the
+wrapper prints `codex-job-id=<id> meta=<path>` on stderr (Phase C needs it),
+and exits with codex's own code, so `exit 2` means a bad flag.
 
 ### Phase B: 6 Claude subagents, one single message
 
@@ -169,14 +174,30 @@ Phase B.
 
 ### Phase C: collect Codex
 
+Load `codex-jobs` first. For EACH of the two jobs, run all three checks before
+reading its findings. The `<meta>` path is the `codex-job-id=... meta=<path>`
+line in that Bash task's output.
+
+```bash
+LC_ALL=C sed -n 's/^status=//p' <meta>   # must be "done"
+ps -p <pid-from-meta> >/dev/null && echo alive   # "running" + dead pid = killed
+test -s $STD_OUT || echo "EMPTY"         # same for $ADV_OUT
+```
+
 ```
 Read($STD_OUT)
 Read($ADV_OUT)
 ```
 
-Empty or missing file = that Codex review failed. Warn, record it in the source
-attribution, do not block. A dead job silently treated as "no findings" is the
-worst outcome here.
+A Codex review FAILED if any one holds: status is `error` or `killed`, status
+is `running` but the pid is dead, or the `-o` file is missing or empty. A
+background task that says exit 0 does not override any of these. Report a
+failure as "Codex standard/adversarial review FAILED (status=<x>)" with the
+tail of `<meta>`'s `.jsonl`, in the summary and the source attribution. Never
+write "no findings" for a failed review. Do not block the rest of the review.
+
+Burn 2026-09-24: every standard review died instantly on a removed flag
+(`status=error`), and the failure read as a clean run.
 
 ### `--focus` mapping
 

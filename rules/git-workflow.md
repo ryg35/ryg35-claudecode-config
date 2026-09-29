@@ -5,7 +5,7 @@
 `<type>: <description>` + blank line + optional body.
 Types: feat, fix, refactor, docs, test, chore, perf, ci
 
-Commit trailer `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` is added
+The `Co-Authored-By: Claude <model> <noreply@anthropic.com>` commit trailer is added
 by the harness; do not add other attribution.
 
 ## Author Email (GH007 prevention, MANDATORY)

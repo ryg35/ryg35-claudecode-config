@@ -2,13 +2,13 @@
 name: document-specialist
 description: External documentation and reference specialist. Looks up library/framework/API docs, evaluates source freshness, and synthesizes findings with citations. Prefers local repo docs first, then official external docs. Differs from doc-updater (which writes/maintains local docs) by focusing on EXTERNAL lookup for implementation guidance. Read-only.
 tools: ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch"]
-model: claude-sonnet-5
-effort: high
+model: claude-opus-5-5
+effort: low
 ---
 
 ## Routing (Sol-centric, tool-gated)
 
-This role depends on `WebFetch`/`WebSearch`, which are Claude Code tools, not something `codex exec` can be handed directly. Default to the Claude `Agent(document-specialist, model=sonnet)` path (this file's `model: sonnet` frontmatter) rather than Codex. Only route through Codex (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '...'")`) if the lookup is scoped to local repo docs already on disk (no live web fetch needed) — in that narrower case Sol is fine and faster.
+This role depends on `WebFetch`/`WebSearch`, which are Claude Code tools, not something `codex exec` can be handed directly. Default to the Claude `Agent(document-specialist)` path rather than Codex. Only route through Codex (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '...'")`) if the lookup is scoped to local repo docs already on disk (no live web fetch needed) — in that narrower case Sol is fine and faster.
 
 ---
 

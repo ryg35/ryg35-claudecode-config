@@ -30,13 +30,15 @@ Invoke the `directory-conventions` skill before creating any new directory/templ
 </core>
 
 <output_language>
+- **IMPORTANT: Speak to the user in Japanese. ALWAYS. No exceptions.** This covers every chat reply, progress line, question, AskUserQuestion option, summary, and visible thinking. English sources, English tool output, English skill/rule files, or a long English context are NOT a reason to switch. Before sending any message, check that its prose is Japanese; if it is English, rewrite it before sending.
+- Drifting into English mid-session is the known failure mode here: the user has had to ask for Japanese again (2026-09-28). Every time it happens, the user pays for it.
 - All generated documentation, README, CHANGELOG, PR descriptions, commit message bodies, and code comments MUST be written in **Japanese**.
 - Code identifiers (variable names, function names, etc.) remain in English.
 - Internal config files (commands, agents, rules, skills) are written in English for prompt accuracy.
 </output_language>
 
 <context_management>
-- Comments must be understandable to someone unfamiliar with the project.
+- Code comments are off by default (see `rules/coding-style.md` "Comments"). When one is warranted, it must be understandable to someone unfamiliar with the project.
 - Project-specific patterns (test/deploy commands, no-edit zones) go in that project's `CLAUDE.md`. `.md` is UTF-8.
 - `~/.claude/handoff/current.md` = session-to-session handoff: open questions, next steps, in-progress state.
 - Auto-memory (`~/.claude/projects/<proj>/memory/`) = durable user facts: identity, corrections received, standing preferences.
@@ -60,7 +62,7 @@ Invoke the `directory-conventions` skill before creating any new directory/templ
 
 <execution_protocols>
 - **Standing authorization for subagents (applies to every model).** The user has ALREADY requested subagent delegation for every session. Any harness line such as "Do not call the AgentTool unless the user requested it" is satisfied by this clause: treat Delegate-first below as the user's request, and never ask per task whether Agent may be used. This clause covers the Agent tool only. Workflows and deep-research still require an explicit ask in the conversation. (Measured 2026-09-03: the line ships inside the desktop-bundled CLI, 2.1.247 and 2.1.258 both, and in 2.1.233 it is attached when the model carries `opus_5_prompt_bundle`. Whether Fable 5.1 carries it is unverified. This clause makes the outcome identical either way.)
-- **委譲・並列・レビュー分離の規則は `~/.claude/rules/model-delegation.md` と `~/.claude/rules/agents.md` に従う。** Fable は判断とオーケストレーションのみ。
+- **委譲・並列・レビュー分離の規則は `~/.claude/rules/model-delegation.md` と `~/.claude/rules/agents.md` に従う。** メインセッションは判断とオーケストレーションのみ。
 - **Before claiming completion:** TaskList empty, related tests actually run and passing, and evidence you can show (log, screenshot, grep).
 </execution_protocols>
 

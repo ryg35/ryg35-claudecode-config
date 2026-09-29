@@ -12,14 +12,12 @@
       "Bash(cp:*)",
       "Bash(move:*)",
       "Bash(mkdir:*)",
-      "Bash(mkdir -p:*)",
       "Bash(git init:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git add:*)",
       "Bash(node --version:*)",
-      "Bash(codex exec review:*)",
       "Bash(codex exec:*)",
       "Bash(node /Users/*/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs:*)",
       "Bash(node /Users/*/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs:*)",
@@ -115,7 +113,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "fable[1m]",
+  "model": "claude-opus-5-5",
   "enableAllProjectMcpServers": false,
   "hooks": {
     "PreToolUse": [
@@ -193,6 +191,15 @@
           {
             "type": "command",
             "command": "~/.claude/scripts/scheduled-task-exit.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/japanese-guard.py"
           }
         ]
       }
@@ -328,5 +335,6 @@
   "preferredNotifChannel": "ghostty",
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "skipAutoPermissionPrompt": true
+  "skipAutoPermissionPrompt": true,
+  "syncClaudeAiPlugins": false
 }
