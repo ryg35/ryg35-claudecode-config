@@ -6,7 +6,7 @@ Claude Code(`~/.claude/`)向けのハーネス設定一式(OSS / MIT)。日々�
 
 - **オーケストレーションcommand 5本**: `/project-init` `/vibe` `/pre-pr-review` `/commit-push` `/review-prs`。日々の開発はほぼこの5つで完結する(command全体では20本)
 - **specialized agent 28本**: planner / architect / tdd-guide / security-reviewer / tracer など。実装と審査を別モデル系統に分ける分業前提の構成
-- **skill群**: 統合レビュー(`code-review`)、SPEC駆動開発(`spec-driven`)、合議計画(`ralplan`)、Codex収束レビュー(`skills/plan/references/codex-converge/SKILL.md` を読んで従う手順)、持続実行(`ralph`、および `skills/ralph/references/ultrawork`)ほか
+- **skill群**: 統合レビュー(`code-review`)、SPEC駆動開発(`spec-driven`)、合議計画(`plan` skill の `--consensus`)、Codex収束レビュー(`skills/plan/references/codex-converge/SKILL.md` を読んで従う手順)、持続実行(`ralph`、および `skills/ralph/references/ultrawork`)、1つの model.json から画面・概念図・ER図を描き分ける(`object-canvas`)、会議前に5Pを詰める(`meeting-5p`)、セッション名を中身に合わせて更新する(`session-title-refresh`)ほか
 - **防御hook**: `scripts/pre-tool-enforcer.sh` がコマンドをトークナイズ解析し、main直push・force push・`gh repo create --push` 等を前方一致denyでは防げない形まで含めてブロック
 - **開発規範(`rules/`)とテンプレート**: coding-style / security / git-workflow / model-delegation / voice / agents / ng-words.yaml、Burn Log(同じ失敗を2回したらルール化)などの運用規約
 
@@ -65,7 +65,7 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 
 レビューの実装は1本しかない。`/pre-pr-review` も `/review-prs` も `/vibe` の Review フェーズも、同じ [`skills/code-review`](./skills/code-review/SKILL.md) を読んで実行する薄い入口にすぎない(詳細は下記)。
 
-「決定が hard to reverse」(認証 / schema migration / 公開API / 破壊的変更) な時、または「実装前に plan を限界まで磨きたい」時は `/ralplan` や `codex-converge`(plan skill の references/codex-converge/SKILL.md を Read して従う)を使う。受入基準そのものが曖昧なまま複数ファイルに手を入れる規模なら `/spec-driven` から入る(いずれも詳細は下記「各commandの要点」)。日々の小タスクには重すぎるので、必要な場面でだけ起動する。
+「決定が hard to reverse」(認証 / schema migration / 公開API / 破壊的変更) な時、または「実装前に plan を限界まで磨きたい」時は `plan` skill の `--consensus` や `codex-converge`(plan skill の references/codex-converge/SKILL.md を Read して従う)を使う。受入基準そのものが曖昧なまま複数ファイルに手を入れる規模なら `/spec-driven` から入る(いずれも詳細は下記「各commandの要点」)。日々の小タスクには重すぎるので、必要な場面でだけ起動する。
 
 ---
 
@@ -121,9 +121,9 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 - **確認ゲート2段**: 「どこまで直すか」(指摘だけ / C・H / C・H・M / 番号指定)と「どう出すか」(push / GitHubに投稿 / commitのみ / 何もしない)。既定値はどのオプションを先頭に出すかを決めるだけで、質問自体は消えない。飛ばすのは `/vibe` のpipelineモードだけ(そこではCRITICALとHIGHを直し、判断はShip gateに集約する)
 - **実行ログ**: 1回のレビューにつき1行を記録し、`/review-status` で「このPRはもうレビューしたか」を引ける
 
-### `/ralplan`: Planner→Architect→Critic の多視点合議で plan を詰める
+### `plan` skill の `--consensus`: Planner→Architect→Critic の多視点合議で plan を詰める
 
-`/plan --consensus` のショートカット。vague な `ralph X` `team X` を **gate** として intercept する役目も持つ。
+旧 `/ralplan`(2026-09-30 に `plan` skill へ統合)。
 
 - **Planner** が初版plan + RALPLAN-DR summary(Principles / Drivers / Options 各 pros/cons)。デフォルトCodex(`gpt-5.6-sol`)
 - **Architect** が steelman antithesis、trade-off tension を提示。デフォルトCodex(`gpt-5.6-sol`)
@@ -144,7 +144,7 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
   - USER STOP: 各ラウンド末の AskUserQuestion で停止選択 (`--auto` で skip)
 - **severity**: `--severity P0|P1|P2` (default P1)。 P0 only で軽量、P2 で strict
 - **opt-in flag**: `--no-adversarial` / `--no-spec-diff` で reviewer を絞れる
-- 単体使用 (plan skill の references/codex-converge/SKILL.md を Read して手順に従う) と `/ralplan --with-codex` 経由の自動起動の両対応
+- 単体使用 (plan skill の references/codex-converge/SKILL.md を Read して手順に従う) と `plan --consensus --with-codex` 経由の自動起動の両対応
 - 出力: 各ラウンドの Codex 出力 (`/tmp/codex-converge-*-r<N>-*.md`) + 収束テーブル(R毎の P1 件数) を chat に提示
 
 ### `/spec-driven` ... 受入基準を先に固めてから実装する
@@ -245,6 +245,7 @@ secret系やローカル固有の状態(`.claude.json`, `cache/`, `sessions/`, `
 - **前提ツール**: `jq`(hooks必須)、`gh`(git系skill)、Codex CLI(`codex-*` scripts / second-opinion)、`cmux` / `yazi`(statusline・ペイン連携、無くても他は動く)
 - **作者の運用に紐づくhookが混ざっている。** 例えば `scripts/public-export-reminder.sh` は、この設定リポ自体にcommitが入ったときだけ「公開ミラーへ反映するか」を毎回確認させるPostToolUse hook。手元で設定を育てるだけなら `settings.json` から外していい
 - **含まれないもの**: インストール由来のスキルパック(plaud系 / issue-filer / Cloudflare公式 等)は別途インストール前提で、このリポには実体を含まない。`deployment-automation` / `expo-deployment` / `find-skills` / `supabase-postgres-best-practices` / `vercel-react-best-practices` は2026-09-13のharness GCで削除済み(60日間使用実績ゼロ)。GCログと削除物の退避先はローカルにのみ残り、リポには含まれない
+- **`security-audit` skill は未収録。** `rules/security.md` と `skills/security-review` はコードベース全体の監査をこの skill に回すが、実体は [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) から各自で入れる前提
 - `statusline-command.sh` は生成物のため未収録。statusline は各自の環境で再生成が必要
 - **`settings.json` の `enabledPlugins` は `codex@openai-codex` 以外すべて `false`。** skillの説明文は全システムプロンプトに文書化されていない約16,000文字の予算内で注入される([anthropics/claude-code#13099](https://github.com/anthropics/claude-code/issues/13099))。無効化した4プラグイン(`llm-application-dev` / `example-skills` / `cloudflare`、および社内marketplace経由の1本)は60日間の使用実績ゼロのまま62,531文字を消費していた。このハーネスを薄く保つための設計判断で、有効化するプラグインは使用実績で選ぶこと
 
@@ -271,12 +272,13 @@ Issue / PR 歓迎。特に歓迎するもの:
 
 ## ライセンスと出典
 
-自作部分は [MIT License](./LICENSE)。以下の外部プロジェクト由来・翻案のファイルを含む(いずれも MIT、元ライセンスに従う):
+自作部分は [MIT License](./LICENSE)。以下の外部プロジェクト由来・翻案のファイルを含む(元ライセンスに従う):
 
 | 由来 | 対象 |
 |------|------|
 | [garrytan/gstack](https://github.com/garrytan/gstack) (MIT) | `rules/voice.md`(翻訳翻案)、ask-brief / Confusion Protocol の原型 |
-| [Yeachan-Heo/oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode) (MIT) | agents の一部(executor / verifier / critic / analyst 等)、skills の一部(ralph / ultrawork / team / ralplan / sciomc 等) |
+| [Yeachan-Heo/oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode) (MIT) | agents の一部(executor / verifier / critic / analyst 等)、skills の一部(ralph / ultrawork / team / sciomc 等、および `plan --consensus` の元になった ralplan) |
 | [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code) (MIT) | `origin: ECC` 表記のファイル(eval-harness 等) |
+| [minorun365/claude-code-japanese-guard](https://github.com/minorun365/claude-code-japanese-guard) (Apache-2.0) | `hooks/japanese-guard.py`(無改変。`hooks/japanese-guard.LICENSE` と `.NOTICE` を同梱) |
 
 インストール由来のスキルパック(plaud系 / Cloudflare公式 / issue-filer 等)は依存物として `.gitignore` で管理外(このリポには含まれない)。

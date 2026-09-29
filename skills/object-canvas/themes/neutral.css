@@ -1,0 +1,22 @@
+/* object-canvas 既定テーマ。
+   生の色コードを書いてよいのはこのファイルだけ。テンプレートと描画コードは var(--oc-*) しか使わない。
+   フォントは端末にあるものだけを指定する（外部フォントを読み込むと単一 HTML でなくなるため）。 */
+:root {
+  --oc-bg: #f5f6f8;        /* キャンバスの地。ドット背景もこの上に描く */
+  --oc-surface: #ffffff;   /* ノード（entity ボックス・画面フレーム）の面 */
+  --oc-border: #d3d8e0;    /* 枠線・関連線・ドット */
+  --oc-text: #1b1f24;      /* 本文 */
+  --oc-muted: #6c7682;     /* 型名・route・補助ラベル */
+  --oc-accent: #2f6df6;    /* 選択・ハイライト・矢印 */
+
+  /* group ごとの淡い塗り。7 つ目以降の group は 1 に戻って循環する */
+  --oc-group-1: #e8effc;
+  --oc-group-2: #e6f6ee;
+  --oc-group-3: #fdf0e3;
+  --oc-group-4: #f3ecfb;
+  --oc-group-5: #fde9ee;
+  --oc-group-6: #e7f5f8;
+
+  --oc-radius: 10px;
+  --oc-font: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+}

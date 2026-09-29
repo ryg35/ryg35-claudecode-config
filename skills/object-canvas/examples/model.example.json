@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "title": "不動産仲介CRM 基幹システム",
+  "entities": [
+    {
+      "id": "office", "label": "店舗", "group": "組織",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "name", "type": "text" },
+        { "name": "area", "type": "text" },
+        { "name": "phone", "type": "text" }
+      ]
+    },
+    {
+      "id": "staff", "label": "担当者", "group": "組織",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "name", "type": "text" },
+        { "name": "email", "type": "text" },
+        { "name": "office_id", "type": "uuid", "fk": "office" },
+        { "name": "role", "type": "text" }
+      ]
+    },
+    {
+      "id": "customer", "label": "顧客", "group": "顧客",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "name", "type": "text" },
+        { "name": "phone", "type": "text" },
+        { "name": "email", "type": "text" },
+        { "name": "budget_max", "type": "integer" },
+        { "name": "assignee_id", "type": "uuid", "fk": "staff" },
+        { "name": "created_at", "type": "timestamptz" }
+      ]
+    },
+    {
+      "id": "building", "label": "建物", "group": "物件",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "name", "type": "text" },
+        { "name": "address", "type": "text" },
+        { "name": "built_year", "type": "integer" },
+        { "name": "structure", "type": "text" }
+      ]
+    },
+    {
+      "id": "property", "label": "物件", "group": "物件",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "building_id", "type": "uuid", "fk": "building" },
+        { "name": "room_no", "type": "text" },
+        { "name": "layout", "type": "text" },
+        { "name": "area_m2", "type": "numeric" },
+        { "name": "status", "type": "text" }
+      ]
+    },
+    {
+      "id": "listing", "label": "募集", "group": "物件",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "property_id", "type": "uuid", "fk": "property" },
+        { "name": "rent", "type": "integer" },
+        { "name": "deposit", "type": "integer" },
+        { "name": "published_at", "type": "timestamptz" },
+        { "name": "owner_staff_id", "type": "uuid", "fk": "staff" }
+      ]
+    },
+    {
+      "id": "inquiry", "label": "問い合わせ", "group": "商談",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "customer_id", "type": "uuid", "fk": "customer" },
+        { "name": "listing_id", "type": "uuid", "fk": "listing" },
+        { "name": "channel", "type": "text" },
+        { "name": "message", "type": "text" },
+        { "name": "received_at", "type": "timestamptz" }
+      ]
+    },
+    {
+      "id": "viewing", "label": "内見", "group": "商談",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "inquiry_id", "type": "uuid", "fk": "inquiry" },
+        { "name": "staff_id", "type": "uuid", "fk": "staff" },
+        { "name": "scheduled_at", "type": "timestamptz" },
+        { "name": "result", "type": "text" }
+      ]
+    },
+    {
+      "id": "application", "label": "入居申込", "group": "商談",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "viewing_id", "type": "uuid", "fk": "viewing" },
+        { "name": "customer_id", "type": "uuid", "fk": "customer" },
+        { "name": "screening_status", "type": "text" },
+        { "name": "applied_at", "type": "timestamptz" }
+      ]
+    },
+    {
+      "id": "contract", "label": "契約", "group": "契約",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "application_id", "type": "uuid", "fk": "application" },
+        { "name": "property_id", "type": "uuid", "fk": "property" },
+        { "name": "start_on", "type": "date" },
+        { "name": "end_on", "type": "date" },
+        { "name": "rent", "type": "integer" }
+      ]
+    },
+    {
+      "id": "payment", "label": "入金", "group": "契約",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "contract_id", "type": "uuid", "fk": "contract" },
+        { "name": "amount", "type": "integer" },
+        { "name": "paid_on", "type": "date" },
+        { "name": "method", "type": "text" }
+      ]
+    },
+    {
+      "id": "document", "label": "書類", "group": "契約",
+      "attributes": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "contract_id", "type": "uuid", "fk": "contract" },
+        { "name": "kind", "type": "text" },
+        { "name": "storage_path", "type": "text" },
+        { "name": "signed_at", "type": "timestamptz" }
+      ]
+    }
+  ],
+  "relations": [
+    { "from": "staff", "to": "office", "label": "所属する", "cardinality": "N:1" },
+    { "from": "customer", "to": "staff", "label": "担当する", "cardinality": "N:1" },
+    { "from": "property", "to": "building", "label": "属する", "cardinality": "N:1" },
+    { "from": "listing", "to": "property", "label": "募集する", "cardinality": "1:1" },
+    { "from": "listing", "to": "staff", "label": "募集担当", "cardinality": "N:1" },
+    { "from": "inquiry", "to": "customer", "label": "問い合わせ元", "cardinality": "N:1" },
+    { "from": "inquiry", "to": "listing", "label": "対象の募集", "cardinality": "N:1" },
+    { "from": "viewing", "to": "inquiry", "label": "内見の元", "cardinality": "N:1" },
+    { "from": "viewing", "to": "staff", "label": "案内する", "cardinality": "N:1" },
+    { "from": "application", "to": "viewing", "label": "申込の元", "cardinality": "1:1" },
+    { "from": "application", "to": "customer", "label": "申込者", "cardinality": "N:1" },
+    { "from": "contract", "to": "application", "label": "契約になる", "cardinality": "1:1" },
+    { "from": "contract", "to": "property", "label": "対象物件", "cardinality": "N:1" },
+    { "from": "payment", "to": "contract", "label": "入金する", "cardinality": "N:1" },
+    { "from": "document", "to": "contract", "label": "契約に紐づく", "cardinality": "N:1" }
+  ],
+  "screens": [
+    {
+      "id": "customer-list", "label": "顧客一覧", "route": "/customers",
+      "entities": ["customer", "staff"],
+      "blocks": [
+        { "kind": "header", "label": "顧客一覧" },
+        { "kind": "filter", "label": "担当者・予算・登録日で絞り込み" },
+        { "kind": "table", "entity": "customer", "columns": ["name", "phone", "budget_max", "assignee_id"] }
+      ]
+    },
+    {
+      "id": "customer-detail", "label": "顧客詳細", "route": "/customers/:id",
+      "entities": ["customer", "staff", "inquiry", "viewing"],
+      "blocks": [
+        { "kind": "header", "label": "顧客詳細" },
+        { "kind": "form", "entity": "customer", "columns": ["name", "phone", "email", "budget_max"] },
+        { "kind": "table", "entity": "inquiry", "columns": ["listing_id", "channel", "received_at"] },
+        { "kind": "button", "label": "内見を登録" }
+      ]
+    },
+    {
+      "id": "listing-list", "label": "募集一覧", "route": "/listings",
+      "entities": ["listing", "property", "building"],
+      "blocks": [
+        { "kind": "header", "label": "募集一覧" },
+        { "kind": "search", "label": "エリア・賃料・間取りで検索" },
+        { "kind": "table", "entity": "listing", "columns": ["property_id", "rent", "deposit", "published_at"] }
+      ]
+    },
+    {
+      "id": "listing-detail", "label": "募集詳細", "route": "/listings/:id",
+      "entities": ["listing", "property", "building", "inquiry"],
+      "blocks": [
+        { "kind": "header", "label": "募集詳細" },
+        { "kind": "card", "label": "物件写真と間取り" },
+        { "kind": "form", "entity": "listing", "columns": ["rent", "deposit", "published_at"] },
+        { "kind": "button", "label": "内見を予約" }
+      ]
+    },
+    {
+      "id": "viewing-calendar", "label": "内見カレンダー", "route": "/viewings",
+      "entities": ["viewing", "staff", "inquiry", "listing"],
+      "blocks": [
+        { "kind": "header", "label": "内見カレンダー" },
+        { "kind": "toolbar", "label": "週表示 / 担当者で絞り込み" },
+        { "kind": "calendar", "label": "週次カレンダー（担当者 × 時間帯）" },
+        { "kind": "list", "entity": "viewing", "columns": ["scheduled_at", "staff_id", "result"] }
+      ]
+    },
+    {
+      "id": "contract-detail", "label": "契約詳細", "route": "/contracts/:id",
+      "entities": ["contract", "application", "property", "payment", "document"],
+      "blocks": [
+        { "kind": "header", "label": "契約詳細" },
+        { "kind": "form", "entity": "contract", "columns": ["start_on", "end_on", "rent"] },
+        { "kind": "table", "entity": "payment", "columns": ["paid_on", "amount", "method"] },
+        { "kind": "list", "entity": "document", "columns": ["kind", "signed_at"] }
+      ]
+    }
+  ],
+  "flows": [
+    { "from": "customer-list", "to": "customer-detail", "label": "行をクリック" },
+    { "from": "listing-list", "to": "listing-detail", "label": "行をクリック" },
+    { "from": "customer-detail", "to": "viewing-calendar", "label": "内見を登録" },
+    { "from": "listing-detail", "to": "viewing-calendar", "label": "内見を予約" },
+    { "from": "viewing-calendar", "to": "contract-detail", "label": "申込から契約へ" }
+  ]
+}

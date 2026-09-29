@@ -118,7 +118,7 @@ Run subtasks in parallel waves, respecting `blocked_by`.
 
 **For each subtask, route by `worker_type`:**
 
-- `executor` / `debugger` / `designer` / `writer` / `test-engineer` (implementation-flavored roles): default to Codex, since cost is not a constraint and Sol is the fastest/most accurate option for implementation work:
+- `executor` / `debugger` / `designer` / `writer` / `test-engineer` (implementation-flavored roles): default to Codex, since cost is not a constraint and Sol is the Codex default for implementation work:
   ```
   Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<worker-preamble + task description + acceptance criteria + paths>' < /dev/null", run_in_background=true)
   ```

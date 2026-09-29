@@ -84,7 +84,7 @@ Each iteration:
 1. **Pick next story.** Read `.claude/ralph/prd.json` and select the highest-priority story with `passes: false`.
 
 2. **Implement the story.**
-   - Default to Codex for the actual implementation: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<story + acceptance criteria>'")`. Cost is not a constraint; Sol is the fastest and most accurate option available. This is the primary path for standard and complex implementation work. If backgrounding this call (see below), append `< /dev/null` to the command.
+   - Default to Codex for the actual implementation: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<story + acceptance criteria>'")`. Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. This is the primary path for standard and complex implementation work. If backgrounding this call (see below), append `< /dev/null` to the command.
    - Fall back to `Task` with Claude model tiers when the Codex CLI is unavailable/errors, or when the story needs in-session tools Codex's sandbox cannot reach (MCP connectors, browser automation, etc.):
      - Trivial lookup: `general-purpose` agent (Haiku default).
      - Standard implementation: `general-purpose` (Sonnet).

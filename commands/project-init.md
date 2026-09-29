@@ -254,10 +254,10 @@ Use Agent tool:
 
 After Phase 3 completes, review the generated output with OpenAI Codex CLI before committing, and auto-fix any issues found.
 
-1. Run Codex CLI in `full-auto` mode to review the generated code and configurations:
+1. Run Codex non-interactively with a workspace-write sandbox (so it can fix files) to review the generated code and configurations. Launch it through the wrapper with Bash `run_in_background: true`:
 
 ```bash
-cd <project-path> && codex --approval-mode full-auto \
+~/.claude/scripts/codex-exec-bg.sh -s workspace-write -C <project-path> \
   "Review all files in this project for code quality, security issues, \
    and best practice violations. Fix any issues you find directly. \
    Focus on: typos, missing error handling, security concerns, \

@@ -2,8 +2,8 @@
 name: tdd-guide
 description: Test-Driven Development specialist enforcing write-tests-first methodology. Use PROACTIVELY when writing new features, fixing bugs, or refactoring code. Ensures 80%+ test coverage.
 tools: ["Read", "Write", "Edit", "Bash", "Grep"]
-model: claude-opus-5
-effort: high
+model: claude-opus-5-5
+effort: medium
 ---
 
 ## Routing (Opus-first)

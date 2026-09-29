@@ -9,6 +9,8 @@ This skill ensures all code follows security best practices and identifies poten
 
 > **Full checklist**: read `security-rules-full.md` in this skill directory (cloud/IaC specifics: `cloud-infrastructure-security.md`, same directory) for the complete P0/P1/P2 rules (OWASP Top 10 / CWE Top 25, JWT, SSRF, path traversal, LLM Top 10, supply chain, attacker-view review prompts, response protocol). Moved out of `~/.claude/rules/security.md` on 2026-07-04 to keep always-on context small.
 
+> **Scope gate**: this skill is for ONE change under implementation. If the request is a codebase-wide audit, pen-test, "find vulnerabilities in ./src", or asks for report artifacts, STOP and load the `security-audit` skill (`~/.claude/skills/security-audit/`, cloudflare/security-audit-skill, installed 2026-09-16) instead. Do not load both: security-audit carries its own attack-class checklists (13 files) and a verifier-separated workflow with `findings.json` + coverage ledger.
+
 ## When to Activate
 
 - Implementing authentication or authorization

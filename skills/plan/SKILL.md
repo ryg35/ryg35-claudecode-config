@@ -84,7 +84,7 @@ If the user only said "plan this", default to the `/plan` command, which is the 
    - If only one viable option remains, an explicit **invalidation rationale** for the rejected alternatives.
    - In `--deliberate`: a **pre-mortem** (3 failure scenarios) and an **expanded test plan** (unit / integration / e2e / observability).
 
-   Delegate: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '<planner prompt + RALPLAN-DR requirements>'")`. Cost is not a constraint for this pass; Sol is the default because it is the strongest available model for plan construction. Fall back to `Task(general-purpose, model=opus, ...)` if the Codex CLI is unavailable.
+   Delegate: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '<planner prompt + RALPLAN-DR requirements>'")`. Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Fall back to `Task(general-purpose, model=opus, ...)` if the Codex CLI is unavailable.
 
 2. **User feedback** *(only with `--interactive`)*: Present the draft plan plus the Principles / Drivers / Options summary via `AskUserQuestion`. Options:
    - Proceed to review.

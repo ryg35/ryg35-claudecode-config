@@ -20,7 +20,7 @@ set -euo pipefail
 # covers the .jsonl/.meta files, chmod covers a JOBS_DIR created by an older
 # version of this script with default (world-readable) permissions.
 umask 077
-JOBS_DIR="/tmp/claude-codex-jobs"
+JOBS_DIR="${CODEX_JOBS_DIR:-/tmp/claude-codex-jobs}"
 mkdir -p "$JOBS_DIR"
 chmod 700 "$JOBS_DIR"
 
@@ -73,6 +73,7 @@ write_meta() {
 }
 
 write_meta "running" "$$"
+printf 'codex-job-id=%s meta=%s\n' "$job_id" "$meta_file" >&2
 
 # The caller is expected to launch this whole script backgrounded (Bash tool's
 # run_in_background). Without that, the harness's 2-minute timeout SIGTERMs us.
@@ -131,8 +132,9 @@ usage_file="$usage_dir/$(date +%Y-%m-%d).jsonl"
 
 # 最後の turn.completed の usage を取る (セッション累積ではなくターン単位なので合算する)
 if [ -f "$log_file" ]; then
-  thread_id=$(grep -o '"thread_id":"[^"]*"' "$log_file" 2>/dev/null | head -1 | cut -d'"' -f4)
-  usage_json=$(grep -o '"usage":{[^}]*}' "$log_file" 2>/dev/null | tail -1 | sed 's/^"usage"://')
+  # pipefail + set -e: a no-match grep would exit 1 here and mask codex's own exit code.
+  thread_id=$(grep -o '"thread_id":"[^"]*"' "$log_file" 2>/dev/null | head -1 | cut -d'"' -f4 || true)
+  usage_json=$(grep -o '"usage":{[^}]*}' "$log_file" 2>/dev/null | tail -1 | sed 's/^"usage"://' || true)
   if [ -n "$usage_json" ]; then
     # thread_id が空のジョブ (起動即エラー) も記録しておく。消費0でも
     # 「呼んだが失敗した」事実が残るほうが、後から数を突き合わせやすい。

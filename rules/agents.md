@@ -11,7 +11,8 @@ Roster lives in `~/.claude/agents/*.md`; the Agent tool lists them.
 
 - Codex runs ONLY via `~/.claude/scripts/codex-exec-bg.sh` with Bash `run_in_background: true`. Never hand-roll `codex exec ... &`.
 - Before touching or reporting on a codex job, invoke the `codex-jobs` skill (five burns there).
-- `/ralplan --interactive --architect codex --critic codex` is the default when agreeing a plan with Codex.
+- Codex model is `gpt-5.6-sol` (the `~/.codex/config.toml` default, effort medium). NEVER pass `-m gpt-6-astra` unless the user names Astra in the conversation. Burn 2026-09-19: Astra at effort low took the Pro Lite weekly limit from 37% to 100% in 3 hours, about 2.7x Sol ultra per token.
+- Agreeing a plan with Codex: run the `plan` skill with `--consensus`, then the `second-opinion` skill for an independent Codex pass.
 
 ## Long-running processes (subagents and your own Bash)
 
@@ -34,6 +35,20 @@ Burn 2026-08-27: an executor left nine next-server processes on ports 3100-3108 
 ## Scheduled-task sessions
 
 Scheduled-task sessions (Claude Desktop) keep their process alive after finishing (2026-08-28: 69 strays, 16GB, 16h). `~/.claude/scripts/claude-session-janitor.py` runs from launchd (`com.ryg35.claude-session-janitor`, every 600s; `launchctl print gui/$(id -u)/com.ryg35.claude-session-janitor`, log `~/.claude/logs/session-janitor.log`). `scripts/scheduled-task-exit.sh` is a Stop hook (registered in `settings.json` on 2026-09-10) that exits them immediately; log `~/.claude/logs/scheduled-task-exit.log`. Match the escaped `name=\"...\"` inside jsonl; RSS size is not a classifier.
+
+## MCP Servers
+
+- **Do NOT re-add `chrome-devtools-mcp` to any MCP config.** Removed 2026-08-22
+  from `~/.claude.json` (1 global + 15 project entries, 16 total; backup at
+  `~/.claude.json.bak-chrome-devtools-20260822`). On macOS 26 the MCP launches
+  Chrome with its own profile and Chrome aborts within ~30ms in
+  `TransformProcessType` / `_RegisterApplication`, then the MCP retries, so the
+  user gets bursts of macOS crash dialogs (13 crash reports in one day, in runs
+  of 4-8 a few seconds apart). Browser work is covered by the built-in Claude
+  Browser pane and Claude in Chrome; there is no capability gap.
+- Known leftover: `<dev-root>/everything-claude-code/.mcp.json` still
+  registers chrome-devtools (git-tracked in that repo). Sessions opened there
+  can reproduce the crash until it is removed.
 
 ## Guidelines
 

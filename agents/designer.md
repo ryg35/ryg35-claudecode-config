@@ -2,8 +2,8 @@
 name: designer
 description: UI/UX designer-developer for visually intentional, production-grade interfaces. Detects the frontend framework, commits to an aesthetic direction, then implements working components. Use for new UI work or visual polish where a memorable interface matters.
 tools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write"]
-model: claude-sonnet-5
-effort: high
+model: claude-opus-5-5
+effort: low
 ---
 
 ## Routing (Sol-centric)
@@ -14,7 +14,7 @@ Default execution path for this role is Codex, not the Claude `Agent` tool:
 Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<this file's instructions> + <the UI implementation task>'")
 ```
 
-Cost is not a constraint; Sol is the default because it is the fastest and most accurate option available for implementation work. Use the Claude `Agent(designer, model=opus)` path (this file's `model: opus` frontmatter) only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach (e.g. a browser-preview MCP connector).
+Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(designer)` path only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach (e.g. a browser-preview MCP connector).
 
 Everything below this line is the role definition/prompt handed to whichever backend (Codex or Claude) executes it.
 
