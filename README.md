@@ -22,7 +22,7 @@ Claude Code(`~/.claude/`)向けのハーネス設定一式(OSS / MIT)。日々�
 Claude Code (~/.claude/, ここ)     Codex CLI (~/.codex/)
 ─────────────────────             ─────────────────────
 入口・計画・レビュー役              実装役(Sol軸)
-sonnet → 大枠の判断                gpt-6.1-sol → 実装 / plan / architect / review
+opus 5.5 → 大枠の判断              gpt-6.1-sol → 実装 / plan / architect / review
 opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業のみ
 ```
 
