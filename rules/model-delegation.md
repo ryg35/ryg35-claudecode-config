@@ -35,7 +35,9 @@ single-unit tasks, and interactive work needing the user between steps. The rule
 parallelism only where independence exists; never split serial work artificially.
 
 Measured burn 2026-08-11: 12 sessions / 13 subagent calls, parallel launches = 0,
-serial rate 100%, even for provably independent pairs. Workers run at effort low or medium; xhigh was measured at median 12.7 min/unit and is reserved for reviewers.
+serial rate 100%, even for provably independent pairs. Workers run at effort low or medium; xhigh was measured at median 12.7 min/unit; reviewers run at high since 2026-09-24.
+
+Every delegation prompt and Workflow script ends with this line: "Time matters here: do not spend time that can be avoided, and the earlier a correct result is obtained, the better." Opus 5.5 paces multiagent work to time signals and finishes sooner with it (Anthropic, Prompting Claude Opus 5.5, "Time signals for multiagent harnesses").
 
 ## Pick up completions immediately (MANDATORY)
 
@@ -51,7 +53,7 @@ unread 13 min. With no other work to continue, arm a fallback wakeup (ScheduleWa
 | Implementation (design already decided) | executor agent (Codex/Sol first per `agents.md`; Claude fallback = **opus 5.5 medium**) |
 | Judgment-heavy workers (tdd-guide / planner / architect / tracer / error-detective) | **opus 5.5 medium** |
 | Codebase search / exploration | Explore or code-explorer (opus 5.5 low) |
-| Code review / security review / verification | code-reviewer / security-reviewer / verifier etc. (**opus 5.5 xhigh**: reviewer tier) |
+| Code review / security review / verification | code-reviewer / security-reviewer / verifier etc. (**opus 5.5 high**: reviewer tier) |
 | Docs, tests, refactoring, scaffolding, planning drafts | matching agent in `~/.claude/agents/` (opus 5.5 low) |
 | Research / external docs lookup | document-specialist / claude-code-guide |
 | Fact lookup where you already know the file+symbol | inline (delegation overhead > work) |
@@ -64,7 +66,7 @@ unread 13 min. With no other work to continue, arm a fallback wakeup (ScheduleWa
 |---|---|---|
 | main session (`claude-opus-5-5` + `effortLevel: medium`) | user dialogue, decisions, synthesis, orchestration | judgment only, NEVER worker tasks |
 | `claude-opus-5-5` + `effort: medium` | tdd-guide / planner / architect / tracer / executor / error-detective | same model as the main session, effort medium for speed |
-| `claude-opus-5-5` + `effort: xhigh` | code-reviewer / security-reviewer / critic / verifier / database-reviewer / typescript-reviewer / silent-failure-hunter | quality gate, slow is fine |
+| `claude-opus-5-5` + `effort: high` | code-reviewer / security-reviewer / critic / verifier / database-reviewer / typescript-reviewer / silent-failure-hunter | quality gate. Opus 5.5 thinks more per level than Opus 5, and Anthropic's guide reserves xhigh/max for measured gains; raise one reviewer only after measuring it. Measured 2026-10-01 (3 diffs): xhigh found the same HIGH count as high (4/19) at 1.8x wall time for code-reviewer, and no difference at 2x for security-reviewer; stay at high |
 | `claude-opus-5-5` + `effort: medium` / `low` | code-review catalog: review-domain-logic / review-security-ops (medium), review-simplify / review-tests (low) | narrow scope, speed first; separate from the reviewer tier (high) above |
 | `claude-opus-5-5` + `effort: low` | all remaining workers (docs / scaffolding / exploration / CI) | speed over reasoning depth |
 | haiku | trivial mechanical only (rename sweeps, format-only passes) | |

@@ -55,6 +55,14 @@ Invoke the `directory-conventions` skill before creating any new directory/templ
 - If you need to delete a file or directory (or untrack it), provide the exact command to the user and let them execute it manually.
 </file_deletion>
 
+<clipboard>
+- Handing text to the user for pasting (prod SQL, long commands): put it on the macOS clipboard with a command. Do not inject it into a browser editor, and do not retype it into a JS string.
+- `pbcopy` does NOT work from the Bash tool here: it exits 0 but the clipboard stays empty (`pbpaste` also returns nothing). Use AppleScript with the sandbox disabled:
+  `osascript -e 'set the clipboard to (read (POSIX file "<abs path>") as «class utf8»)'`
+- Always read it back with `osascript -e 'the clipboard' | head -3` before saying "copied". A 0 exit code is not evidence.
+- Burn 2026-09-29: told the user "copied" after pbcopy; the clipboard was empty. Before that, a 993-line migration was retyped into the browser, 10k+ tokens and too slow.
+</clipboard>
+
 <public_release>
 - Deploying a NEW public-facing artifact for the first time (new site/LP deploy, minting a public URL, posting to SNS, sending anything outward) REQUIRES asking the user first. No exceptions, even when "publish today" is the stated goal; the goal authorizes building, not the moment of exposure.
 - User-instructed updates to something already public (fix redeploys, content corrections) do not require re-confirmation.

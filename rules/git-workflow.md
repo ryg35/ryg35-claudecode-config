@@ -74,6 +74,28 @@ cd <repo> && git push origin <branch>
 burn 2026-08-31: f1-weather PR #62 で `git push` を実行しようとして拒否された。
 burn 2026-09-05 (2回目、規則に昇格): PR #66 で素の `git push` を渡し「明示的に」と指摘された。
 
+## Branch names: `release/<x>` fails when a `release` branch exists
+
+Git stores branches as files under `refs/heads/`, so `release` and `release/<name>` cannot
+coexist: `git switch -c release/foo` dies with `cannot lock ref ... 'refs/heads/release' exists`.
+Same for any `<name>` / `<name>/<sub>` pair.
+
+**Do not escape it by renaming to `release-<name>`.** Reuse the existing branch: fast-forward
+it to the target base, then cherry-pick.
+
+```bash
+git switch release && git merge --ff-only origin/main
+```
+
+`git reset --hard` is deny-listed by the pre-tool-enforcer, which is what pushes you toward a
+new name. `merge --ff-only` does the same job when the branch is already contained in the base
+(check with `git merge-base --is-ancestor <branch> origin/main`), and it refuses instead of
+destroying work when it is not.
+
+burn 2026-09-20: client-project-A の release で `release/campaign-kpi-...` が作れず、reset も deny
+され、`release-campaign-kpi-2026-09-20` に逃げた。ff-only を探さなかっただけで、PR を 1 本
+作り直しになった。
+
 ## Pull Request Workflow
 
 Use `git diff [base-branch]...HEAD`, the full history, not just the latest commit.
