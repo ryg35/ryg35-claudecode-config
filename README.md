@@ -279,13 +279,15 @@ Issue / PR 歓迎。特に歓迎するもの:
 
 ## ライセンスと出典
 
-自作部分は [MIT License](./LICENSE)。以下の外部プロジェクト由来・翻案のファイルを含む(元ライセンスに従う):
+自作部分は [MIT License](./LICENSE)。以下の外部プロジェクトの文章やコードが残っているファイルを含み、それぞれ元のライセンスに従う。ファイル一覧、著作権表示、ライセンス本文は [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) にまとめた:
 
 | 由来 | 対象 |
 |------|------|
-| [garrytan/gstack](https://github.com/garrytan/gstack) (MIT) | `rules/voice.md`(翻訳翻案)、ask-brief / Confusion Protocol の原型 |
-| [Yeachan-Heo/oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode) (MIT) | agents の一部(executor / verifier / critic / analyst 等)、skills の一部(ralph / ultrawork / team / sciomc 等、および `plan --consensus` の元になった ralplan) |
-| [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code) (MIT) | `origin: ECC` 表記のファイル(eval-harness 等) |
-| [minorun365/claude-code-japanese-guard](https://github.com/minorun365/claude-code-japanese-guard) (Apache-2.0) | `hooks/japanese-guard.py`(無改変。`hooks/japanese-guard.LICENSE` と `.NOTICE` を同梱) |
+| [garrytan/gstack](https://github.com/garrytan/gstack) (MIT) | `ETHOS.md`、`rules/voice.md`(翻訳翻案)、`skills/ask-brief`、`rules/coding-style.md` の Confusion Protocol 節 |
+| [Yeachan-Heo/oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode) (MIT) | agents: analyst / critic / designer / document-specialist / executor / scientist / verifier。skills: ai-slop-cleaner / deep-dive / deepinit / plan(references/deep-interview を含む) / ralph(references/ultrawork を含む) / team |
+| [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code) (MIT) | agents: architect / build-error-resolver / code-explorer / code-reviewer / code-simplifier / doc-updater / e2e-runner / harness-optimizer / planner / security-reviewer / silent-failure-hunter / tdd-guide / typescript-reviewer。skills: agent-introspection-debugging / config-gc / deep-research / eval-harness / security-review / strategic-compact |
+| [VoltAgent/awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) (MIT) | agents: chaos-engineer / error-detective / sre-engineer |
+| [obra/superpowers](https://github.com/obra/superpowers) (MIT) | `skills/skill-authoring`、`agents/verifier.md` の言い訳防止表 |
+| [minorun365/claude-code-japanese-guard](https://github.com/minorun365/claude-code-japanese-guard) (Apache-2.0) | `hooks/japanese-guard.py`(無改変。LICENSE / NOTICE は同じディレクトリ) |
 
 インストール由来のスキルパック(plaud系 / Cloudflare公式 / issue-filer 等)は依存物として `.gitignore` で管理外(このリポには含まれない)。

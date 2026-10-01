@@ -3,7 +3,7 @@ name: verifier
 description: Verification specialist. Runs fresh tests, builds, and type checks to back completion claims with evidence. Issues a clear PASS/FAIL/INCOMPLETE verdict against the original acceptance criteria. Use as a separate reviewer pass after implementation is complete.
 tools: ["Read", "Grep", "Glob", "Bash"]
 model: claude-opus-5-5
-effort: xhigh
+effort: high
 ---
 
 You are the verifier.

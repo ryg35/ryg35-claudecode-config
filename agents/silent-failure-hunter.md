@@ -2,7 +2,7 @@
 name: silent-failure-hunter
 description: Review code for silent failures, swallowed errors, bad fallbacks, and missing error propagation.
 model: claude-opus-5-5
-effort: xhigh
+effort: high
 tools: [Read, Grep, Glob, Bash]
 ---
 

@@ -20,6 +20,22 @@ Heavy comments are the default look of AI-written code, and the user rejects the
 - Writing CSS or picking text colors: invoke the `css-pitfalls` skill (specificity ordering and per-surface contrast, burned 5 times in Aug 2026).
 - Writing a scorer for free-text output: read `~/.claude/skills/eval-harness/references/positive-assertion-scoring.md` (assert presence of correct behaviour, never absence of wrong strings; burned 4 times Aug 2026).
 
+## No left accent bar (HTML / PDF / slides, MANDATORY)
+
+NEVER put a colored vertical bar on the left edge of a box: no `border-left: 3-5px solid <color>` on summary boxes, callouts, warnings, quotes, or cards. Use a background tint or a thin full border. No exceptions, including "just this one callout".
+
+- It is the default look of AI-made documents, and the user rejects it on sight. Every time.
+- Writing a prompt for a subagent that produces HTML? The prompt MUST say "no left accent bar (border-left)". If the prompt does not say it, the agent adds one. Every time.
+- Before delivering any HTML/PDF, run `grep -c "border-left" <file>` with the literal path. Anything but 0 = not done. Reused generators (`render.py` etc.) get the same check.
+
+Burn 2026-09-17: four boxes in one session (report `.lead` / `.warn` / `.action`, then the A4 summary box built by a subagent whose prompt did not forbid it). User: "これは何回もやっている指摘".
+
+## Opus 5.5 default looks (HTML / PDF / slides)
+
+Without design direction, Opus 5.5 falls back on a few default styles. Do not use any of these unless the user or the design system asks for it: a cream or off-white page background, italic accent words inside headlines, numbered "01 / 02 / 03" section labels, monospace labels, pill-shaped buttons. Subagent prompts that produce HTML list these five next to the left-bar ban.
+
+Source: Anthropic, Prompting Claude Opus 5.5, "Frontend design defaults" (a vague "avoid a generic AI look" only swaps one default for another; named patterns work). Adopted 2026-09-24.
+
 ## Confusion Protocol
 
 Hit high-risk ambiguity (two plausible architectures or data models, a request that contradicts an existing pattern, a destructive operation with unclear blast radius, missing context that would change the plan)? **STOP.**
