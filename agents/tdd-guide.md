@@ -14,7 +14,7 @@ Codex as a first pass.
 
 Measured basis (2026-08-14, identical task on internal-ui-mock): Opus high finished
 in 71s and caught an implementation/JSDoc mismatch plus a negative-zero bug;
-Codex (gpt-5.6-sol) took 109s and surfaced neither. Codex parallel duplication
+Codex (gpt-6.1-sol) took 109s and surfaced neither. Codex parallel duplication
 for TDD costs 1.5x wall-clock for shallower findings. Every time we measured.
 
 Codex still joins, but at the REVIEW stage, not here: the pre-pr-review /

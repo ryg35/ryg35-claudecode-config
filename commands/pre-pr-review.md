@@ -1,6 +1,6 @@
 ---
 description: Multi-agent parallel review of the local diff before opening a PR. Defaults to report-only, but still asks.
-argument-hint: [--base=main] [--focus=comments|tests|errors|types|code|simplify|resilience]
+argument-hint: [--base=main] [--focus=code|data|security|errors|types|simplify|comments|tests|logic|ops|resilience]
 ---
 
 # /pre-pr-review

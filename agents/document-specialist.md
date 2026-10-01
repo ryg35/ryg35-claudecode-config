@@ -8,7 +8,7 @@ effort: low
 
 ## Routing (Sol-centric, tool-gated)
 
-This role depends on `WebFetch`/`WebSearch`, which are Claude Code tools, not something `codex exec` can be handed directly. Default to the Claude `Agent(document-specialist)` path rather than Codex. Only route through Codex (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '...'")`) if the lookup is scoped to local repo docs already on disk (no live web fetch needed) — in that narrower case Sol is fine and faster.
+This role depends on `WebFetch`/`WebSearch`, which are Claude Code tools, not something `codex exec` can be handed directly. Default to the Claude `Agent(document-specialist)` path rather than Codex. Only route through Codex (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '...'")`) if the lookup is scoped to local repo docs already on disk (no live web fetch needed) — in that narrower case Sol is fine and faster.
 
 ---
 

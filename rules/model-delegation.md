@@ -65,6 +65,7 @@ unread 13 min. With no other work to continue, arm a fallback wakeup (ScheduleWa
 | main session (`claude-opus-5-5` + `effortLevel: medium`) | user dialogue, decisions, synthesis, orchestration | judgment only, NEVER worker tasks |
 | `claude-opus-5-5` + `effort: medium` | tdd-guide / planner / architect / tracer / executor / error-detective | same model as the main session, effort medium for speed |
 | `claude-opus-5-5` + `effort: xhigh` | code-reviewer / security-reviewer / critic / verifier / database-reviewer / typescript-reviewer / silent-failure-hunter | quality gate, slow is fine |
+| `claude-opus-5-5` + `effort: medium` / `low` | code-review catalog: review-domain-logic / review-security-ops (medium), review-simplify / review-tests (low) | narrow scope, speed first; separate from the reviewer tier (high) above |
 | `claude-opus-5-5` + `effort: low` | all remaining workers (docs / scaffolding / exploration / CI) | speed over reasoning depth |
 | haiku | trivial mechanical only (rename sweeps, format-only passes) | |
 

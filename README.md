@@ -22,12 +22,12 @@ Claude Code(`~/.claude/`)向けのハーネス設定一式(OSS / MIT)。日々�
 Claude Code (~/.claude/, ここ)     Codex CLI (~/.codex/)
 ─────────────────────             ─────────────────────
 入口・計画・レビュー役              実装役(Sol軸)
-sonnet → 大枠の判断                gpt-5.6-sol → 実装 / plan / architect
+sonnet → 大枠の判断                gpt-6.1-sol → 実装 / plan / architect / review
 opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業のみ
 ```
 
 - **すべての実装は、実装者とは異なるモデル系統による独立reviewを前提に書かれている。** 時間より品質を優先する思想で運用している(詳細は [`CLAUDE.md`](./CLAUDE.md))
-- **実装・計画フェーズは基本的にCodex(`gpt-5.6-sol`)に委譲する。** コストは制約にしない。速度と正確性のトレードオフだけを見る。`plan`のPlanner/Architect passや、`ralph`/`ultrawork`/`team`の実装stepは `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol ...")` をデフォルト経路として呼ぶ(生の `codex exec` は job登録とstatusline表示が消えるため、`scripts/pre-tool-enforcer.sh` がブロックする)
+- **実装・計画フェーズは基本的にCodex(`gpt-6.1-sol`)に委譲する。** コストは制約にしない。速度と正確性のトレードオフだけを見る。`plan`のPlanner/Architect passや、`ralph`/`ultrawork`/`team`の実装stepは `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol ...")` をデフォルト経路として呼ぶ(生の `codex exec` は job登録とstatusline表示が消えるため、`scripts/pre-tool-enforcer.sh` がブロックする)
 - **Critic(最終審査)だけはデフォルトでClaude Opusのまま残す。** PlannerやArchitectがSolで動いても、同じモデル系統に自己承認させると見落としが起きやすい(self-preference bias)。独立した目で見るのがCriticの存在意義。`--critic codex` で明示的にSolへ切り替えることもできるが、速度を独立性より優先する時だけの opt-in
 - 役割分担の一次情報源は **Routing (Sol-centric)** セクションを持つ [`agents/<name>.md`](./agents/)(全agentのうち実装寄りの一部)と [`skills/plan/SKILL.md`](./skills/plan/SKILL.md) の Provider overrides
 
@@ -89,7 +89,7 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 1. **Sync** ... mainを最新化し、conflictの有無を確認
 2. **Plan(ゲート)** ... 既存の計画を**探してから**作る。探索順は `specs/<NNN>-<slug>/tasks.md` → `docs/plan/*.md` → 新規生成。SPEC駆動で回しているリポジトリで `docs/plan/` しか見ないと、作業リストを無視して重複plan を作ってしまうため
 3. **TDD実装** ... `tdd-guide` agent主導。**テストを書き換えて突破することは明示禁止**
-4. **Review** ... `skills/code-review` をpipelineモードで実行(subagent 6体 + Codex 2本を並列。ゲートは `/vibe` 側のShip gateに集約するのでここでは訊かない)
+4. **Review** ... `skills/code-review` をpipelineモードで実行(差分に応じて選んだレビュアー + Codex 2本を並列。ゲートは `/vibe` 側のShip gateに集約するのでここでは訊かない)
 5. **Verify** ... `verify` → 失敗したら `build-fix` → `smoke-test`(テスト改竄は同じく禁止)
 6. **E2E(条件付き)** ... 既存の `playwright.config.*` または `tests/e2e/` があり、かつ UI/route変更が含まれる場合だけ走らせる。無ければskip
 7. **Deps / docs同期** ... 新規パッケージがあれば `dependency-check`、続けて `doc-updater` で変更点をdocs/に反映
@@ -116,7 +116,13 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 
 レビューの実装はここ1本だけ。以前はレビューを持つcommandが並列起動ブロックを各自コピーして抱えており、コピーは既にずれていた(`/vibe` だけsubagentを5体しか起動せず、コメント/TODO担当が回っていなかった)。入口は `/pre-pr-review` `/review-prs` `/vibe` のReviewフェーズ、そしてskill直呼びの4つで、実行されるのは同じ1本。
 
-- **並列レビュー**: Codex 2本(standard / adversarial)をbackgroundで先に投げ、Claude subagent 6体(`code-reviewer` / `security-reviewer` / `silent-failure-hunter` / `typescript-reviewer` / `code-simplifier` / コメント・TODO担当)を**1メッセージで**同時起動。main agentは集約役で、自分でレビューして代わりにすることを禁止している
+- **差分に応じたレビュアー選び(Step 1.6 Route)**: 役割を1つに絞ったレビュアーのカタログから、差分の中身を見て必要なものだけを起動する。起動したものと見送ったものは理由つきで1行に宣言する
+  - 常時: Codex 2本。`codex:data-security`(db / security / XSS・インジェクション・SSRF などの Web 脆弱性)と `codex:correctness`(正常系・失敗系・型・async・perf)。レビュー時だけ推論を high にする
+  - 差分に応じて: `review-domain-logic`(業務ロジックを実データや docs と突き合わせる) / `review-simplify`(不要なコメント・長さ・既存コードとの重複) / `review-security-ops`(フラグ・env・設定が効いているか、出力の PII) / `review-tests`(テストの欠落と検証の甘さ)
+  - 起動は**1メッセージで**同時に行う。main agentは集約役で、自分でレビューして代わりにすることを禁止している
+- **なぜカタログ方式か**: 過去ログで測ると、待ち時間を決めていたのは見る範囲の広い汎用レビュアーだった(ツール呼び出し回数と所要時間の相関 r=0.91)。重大な指摘は db と security に集中し、Codex が単独で拾うものが多かった。コメント・簡素化・テストは Claude がほぼ独占していた。範囲を細く切って差分ごとに選ぶ形にしたのはこのため
+- **Codex が落ちたとき**: その担当範囲だけを `security-reviewer` / `silent-failure-hunter` が代わりに見て、レポートに `Codex: FAILED -> fallback` を出す
+- **出典タグ**: 各レビュアーが自分の名前だけを付ける(`[source: a, b]`)。集約側では付け替えない。指摘件数に上限は付けず、CRITICAL / HIGH は根拠つきで全件、MEDIUM / LOW は1行
 - **resilience 3-pack(条件付き)**: migration / infra / 新規APIエンドポイント / 500行超 などの条件に当たったときだけ `sre-engineer` `chaos-engineer` `error-detective` を追加起動し、Resilience Gate(PASS / WARN / BLOCK)を出す
 - **確認ゲート2段**: 「どこまで直すか」(指摘だけ / C・H / C・H・M / 番号指定)と「どう出すか」(push / GitHubに投稿 / commitのみ / 何もしない)。既定値はどのオプションを先頭に出すかを決めるだけで、質問自体は消えない。飛ばすのは `/vibe` のpipelineモードだけ(そこではCRITICALとHIGHを直し、判断はShip gateに集約する)
 - **実行ログ**: 1回のレビューにつき1行を記録し、`/review-status` で「このPRはもうレビューしたか」を引ける
@@ -125,8 +131,8 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 
 旧 `/ralplan`(2026-09-30 に `plan` skill へ統合)。
 
-- **Planner** が初版plan + RALPLAN-DR summary(Principles / Drivers / Options 各 pros/cons)。デフォルトCodex(`gpt-5.6-sol`)
-- **Architect** が steelman antithesis、trade-off tension を提示。デフォルトCodex(`gpt-5.6-sol`)
+- **Planner** が初版plan + RALPLAN-DR summary(Principles / Drivers / Options 各 pros/cons)。デフォルトCodex(`gpt-6.1-sol`)
+- **Architect** が steelman antithesis、trade-off tension を提示。デフォルトCodex(`gpt-6.1-sol`)
 - **Critic** が testability / risk mitigation / 代替案探索の十分さを判定。デフォルトClaude Opus固定(独立reviewの要、Solでの自己承認を避ける)
 - APPROVE になるまで Planner → Architect → Critic を **最大5 iter** 反復(sequential、parallel ではない)
 - `--deliberate` で pre-mortem (3シナリオ) + 拡張テスト計画 (unit / integration / e2e / observability) を強制
@@ -192,7 +198,8 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 | `planner` | 実装計画の立案 |
 | `architect` | アーキテクチャ設計 |
 | `tdd-guide` | TDD enforcement、**テスト改竄の検出と拒否** |
-| `code-reviewer` / `typescript-reviewer` / `security-reviewer` / `silent-failure-hunter` / `code-simplifier` | レビュー各種(`skills/code-review` が並列起動する面々) |
+| `review-domain-logic` / `review-simplify` / `review-security-ops` / `review-tests` | `skills/code-review` のカタログ。役割を1つに絞り、差分に応じて起動 |
+| `code-reviewer` / `typescript-reviewer` / `security-reviewer` / `silent-failure-hunter` / `code-simplifier` | 汎用レビュー。`skills/code-review` の経路では Codex 失敗時の代替のみ |
 | `build-error-resolver` | ビルド/型エラーの最小修正 |
 | `e2e-runner` | Playwright scaffold と実行 |
 | `doc-updater` | docs/ と codemap の更新 |
@@ -208,7 +215,7 @@ opus → Critic(独立reviewの要)      terra/luna → 軽量・機械的作業
 | ディレクトリ | 役割 |
 |------|------|
 | [`commands/`](./commands/) | slash command 定義20本(`/vibe` `/project-init` 等)。実装を持つものと、agent/skillへ委譲する薄膜が混在 |
-| [`agents/`](./agents/) | specialized subagent 定義28本 |
+| [`agents/`](./agents/) | specialized subagent 定義32本 |
 | [`skills/`](./skills/) | Progressive Disclosureで呼ばれる知識パッケージ26本(例: [`code-review`](./skills/code-review/SKILL.md) / [`spec-driven`](./skills/spec-driven/SKILL.md) / `ralph`)。`codex-converge` / `deep-interview` / `autopilot` は `skills/plan/references/` に同梱 |
 | [`rules/`](./rules/) | 常時ロードされる開発規範(coding-style / security / git-workflow / model-delegation / voice / agents / ng-words.yaml) |
 | [`templates/`](./templates/) | プロジェクト初期化seed。[`PROJECT-SEED.md`](./templates/PROJECT-SEED.md) が単一のsource of truth |
@@ -255,7 +262,7 @@ secret系やローカル固有の状態(`.claude.json`, `cache/`, `sessions/`, `
 
 - [`CLAUDE.md`](./CLAUDE.md) ... 全プロジェクト共通原則(Codex review前提、品質優先、Output Language等)
 - [`rules/`](./rules/) ... coding-style / security / git-workflow / model-delegation / voice / agents / ng-words.yaml。`directory-conventions`(`specs/` と `docs/plan/` の振り分け)と `backup-verification`(同期は表示ではなく受信側の件数で確認する)は [`skills/directory-conventions/`](./skills/directory-conventions/) と [`skills/backup-verification/`](./skills/backup-verification/) に同梱
-- [`skills/code-review/SKILL.md`](./skills/code-review/SKILL.md) ... レビュー経路の実装(subagent 6体 + Codex 2本 + 確認ゲート2段)
+- [`skills/code-review/SKILL.md`](./skills/code-review/SKILL.md) ... レビュー経路の実装(差分に応じたレビュアーのカタログ + Codex 2本 + 確認ゲート2段)
 - [`skills/spec-driven/SKILL.md`](./skills/spec-driven/SKILL.md) ... SPEC駆動開発の手順と雛形
 - [`templates/PROJECT-SEED.md`](./templates/PROJECT-SEED.md) ... docs生成の単一source of truth
 - [`handoff/README.md`](./handoff/README.md) ... セッション間ハンドオフ規約(memory は使わない方針)
