@@ -84,7 +84,7 @@ Each iteration:
 1. **Pick next story.** Read `.claude/ralph/prd.json` and select the highest-priority story with `passes: false`.
 
 2. **Implement the story.**
-   - Default to Codex for the actual implementation: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<story + acceptance criteria>'")`. Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. This is the primary path for standard and complex implementation work. If backgrounding this call (see below), append `< /dev/null` to the command.
+   - Default to Codex for the actual implementation: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<story + acceptance criteria>'")`. Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. This is the primary path for standard and complex implementation work. If backgrounding this call (see below), append `< /dev/null` to the command.
    - Fall back to `Task` with Claude model tiers when the Codex CLI is unavailable/errors, or when the story needs in-session tools Codex's sandbox cannot reach (MCP connectors, browser automation, etc.):
      - Trivial lookup: `general-purpose` agent (Haiku default).
      - Standard implementation: `general-purpose` (Sonnet).
@@ -279,8 +279,8 @@ Three independent tasks fired in one message. The default path shells out to Cod
 
 ```
 Task(general-purpose, model=haiku, "Add type export for UserConfig in src/types/user.ts")
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- 'Implement caching layer in src/cache/api-cache.ts'")
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- 'Refactor auth module in src/auth/ to support OAuth2'")
+Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- 'Implement caching layer in src/cache/api-cache.ts'")
+Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- 'Refactor auth module in src/auth/ to support OAuth2'")
 ```
 
 ### Bad: claiming done without evidence

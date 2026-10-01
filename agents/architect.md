@@ -11,7 +11,7 @@ effort: medium
 Default execution path for this role is Codex, not the Claude `Agent` tool:
 
 ```
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '<this file's instructions> + <the architecture task>'")
+Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '<this file's instructions> + <the architecture task>'")
 ```
 
 Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(architect)` path only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach.

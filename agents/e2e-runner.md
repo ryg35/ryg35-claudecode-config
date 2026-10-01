@@ -11,7 +11,7 @@ effort: low
 Default execution path for this role is Codex, not the Claude `Agent` tool:
 
 ```
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<this file's instructions> + <the E2E task>'")
+Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<this file's instructions> + <the E2E task>'")
 ```
 
 Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(e2e-runner)` path as a fallback when the Codex CLI is unavailable or errors, or when Agent Browser needs an in-session browser connector (e.g. the `claude-in-chrome` MCP) that Codex's sandbox cannot reach.

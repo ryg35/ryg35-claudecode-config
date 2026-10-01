@@ -11,7 +11,7 @@ effort: medium
 Default execution path for this role is Codex, not the Claude `Agent` tool:
 
 ```
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<this file's instructions> + <the scoped task>'")
+Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<this file's instructions> + <the scoped task>'")
 ```
 
 Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(executor)` path (this file's `model: claude-opus-5-5` + `effort: medium` frontmatter) only as a fallback when the Codex CLI is unavailable or errors, or when the task specifically benefits from staying inside the same context as the calling session (e.g. it needs tools Codex's sandbox cannot reach, like an in-session MCP connector).

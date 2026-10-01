@@ -62,7 +62,7 @@ If the user only said "plan this", default to the `/plan` command, which is the 
 
 ## Direct mode
 
-1. **Quick analysis.** `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol ...")` for a brief requirements review when the request touches multiple subsystems. Fall back to `Task(general-purpose, model=opus)` if the Codex CLI is unavailable.
+1. **Quick analysis.** `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol ...")` for a brief requirements review when the request touches multiple subsystems. Fall back to `Task(general-purpose, model=opus)` if the Codex CLI is unavailable.
 2. **Create plan.** Use the `/plan` command's template structure (`docs/plan/<verb-topic>.md` with `_template-feature.md` / `_template-fix.md` / `_template-investigate.md`). See `~/.claude/templates/plan/` for masters.
 3. **Frontmatter:** `status: backlog` + `branch: <derived>`. Follow `~/.claude/skills/directory-conventions/SKILL.md`.
 4. Stop. Mark `pending approval`. Do not auto-execute.
@@ -84,7 +84,7 @@ If the user only said "plan this", default to the `/plan` command, which is the 
    - If only one viable option remains, an explicit **invalidation rationale** for the rejected alternatives.
    - In `--deliberate`: a **pre-mortem** (3 failure scenarios) and an **expanded test plan** (unit / integration / e2e / observability).
 
-   Delegate: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '<planner prompt + RALPLAN-DR requirements>'")`. Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Fall back to `Task(general-purpose, model=opus, ...)` if the Codex CLI is unavailable.
+   Delegate: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '<planner prompt + RALPLAN-DR requirements>'")`. Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Fall back to `Task(general-purpose, model=opus, ...)` if the Codex CLI is unavailable.
 
 2. **User feedback** *(only with `--interactive`)*: Present the draft plan plus the Principles / Drivers / Options summary via `AskUserQuestion`. Options:
    - Proceed to review.
@@ -93,7 +93,7 @@ If the user only said "plan this", default to the `/plan` command, which is the 
 
    Without `--interactive`, skip this step and proceed automatically.
 
-3. **Architect review.** `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '<architect prompt>'")`. Fall back to `Task(general-purpose, model=opus, ...)` if the Codex CLI is unavailable.
+3. **Architect review.** `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '<architect prompt>'")`. Fall back to `Task(general-purpose, model=opus, ...)` if the Codex CLI is unavailable.
    - Must include: the strongest steelman antithesis against the favored option, at least one real tradeoff tension, a synthesis path when possible.
    - In `--deliberate`, must explicitly flag principle violations.
    - **Wait for this to complete before step 4.** Do not parallelize steps 3 and 4.
@@ -132,10 +132,10 @@ If the user only said "plan this", default to the `/plan` command, which is the 
 
 ### Provider overrides
 
-Codex (`gpt-5.6-sol`) is the **default** for Planner and Architect (see steps 1 and 3). Critic stays on Claude Opus by default (see step 4 rationale).
+Codex (`gpt-6.1-sol`) is the **default** for Planner and Architect (see steps 1 and 3). Critic stays on Claude Opus by default (see step 4 rationale).
 
 - `--architect claude` → force the Architect pass back to `Task(general-purpose, model=opus, prompt=<architect prompt>)` instead of Codex.
-- `--critic codex` → opt the Critic pass into Codex too (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol -- '<critic prompt>'")`), sacrificing model-lineage independence for speed. Only use this when the plan is low-risk and a fast turnaround matters more than an independent check.
+- `--critic codex` → opt the Critic pass into Codex too (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '<critic prompt>'")`), sacrificing model-lineage independence for speed. Only use this when the plan is low-risk and a fast turnaround matters more than an independent check.
 - `--planner claude` → force the Planner pass back to Claude Opus.
 
 If the Codex CLI is missing or errors, note the fallback and continue with the Claude default for that pass.
@@ -189,7 +189,7 @@ Save plans to `docs/plan/<verb-topic>.md` (kebab-case) per `~/.claude/skills/dir
 - `AskUserQuestion` for preference questions (scope, priority, timeline, risk tolerance) when `--interactive` is set.
 - Plain text only for questions that need a specific value (port number, file name, free-form clarification).
 - `Task(general-purpose, model=haiku)` to explore the codebase before asking the user about it. Answer your own codebase questions first.
-- `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol ...")` for planner and architect passes (default). `Task(critic, model=opus)` for the critic pass (default, kept independent of Sol).
+- `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol ...")` for planner and architect passes (default). `Task(critic, model=opus)` for the critic pass (default, kept independent of Sol).
 - `Task(general-purpose, model=opus)` as the fallback for planner/architect if Codex CLI is unavailable, or when `--architect claude` / `--planner claude` is passed.
 - **Consensus mode agent calls are sequential.** Always wait for the Architect result before issuing the Critic call.
 - Never invoke an execution skill before explicit approval is captured.

@@ -22,7 +22,7 @@ Optional flags (prepend before task description):
 GATE 1: Sync       → fetch-pull + conflict-check
 GATE 2: Plan       → reuse existing specs/<NNN>-<slug>/tasks.md (first) OR docs/plan/*.md (fallback) OR generate (last resort). User approval required.
 AUTO 3: Implement   → tdd
-AUTO 4: Review      → skills/code-review (6 Claude subagents + codex x2 in parallel, gates skipped in pipeline mode)
+AUTO 4: Review      → skills/code-review (catalog reviewers routed per diff + codex x2 always, in parallel, gates skipped in pipeline mode)
 AUTO 5: Verify      → verify → build-fix (if needed) → smoke-test
 AUTO 5.5: E2E       → e2e-runner (if UI/route changes detected)
 AUTO 6: Deps        → dependency-check (if new packages added)
@@ -50,7 +50,7 @@ Phases:
   1. [GATE] Sync        - Fetch, pull, conflict check
   2. [GATE] Plan        - Reuse existing plan (preferred) or generate new
   3. [AUTO] Implement   - TDD: test → code → refactor
-  4. [AUTO] Review      - skills/code-review: 6 subagents + codex x2
+  4. [AUTO] Review      - skills/code-review: routed review-* agents + codex x2
   5. [AUTO] Verify      - Build, types, lint, tests
   5.5 [AUTO] E2E        - Playwright journey tests (if UI/route changed)
   6. [AUTO] Deps        - Dependency audit (if applicable)
@@ -219,6 +219,8 @@ Two rules from this file bind inside the skill run:
 
 ```
 Phase 4 COMPLETE: Review
+  起動:                 <Step 1.6 line> / 見送り: <...>
+  Codex:                [OK | FAILED (<name>) -> fallback <agent>]
   Resilience Review:    [RAN | SKIPPED (trigger not met)]
   Findings:             X CRITICAL, Y HIGH, Z MEDIUM, W LOW
   Fixed:                N (CRITICAL + HIGH)

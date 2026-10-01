@@ -11,7 +11,7 @@ effort: low
 Default execution path for this role is Codex, not the Claude `Agent` tool:
 
 ```
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<this file's instructions> + <the CI/CD generation task>'")
+Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<this file's instructions> + <the CI/CD generation task>'")
 ```
 
 Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(ci-gen)` path only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach.

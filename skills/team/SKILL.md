@@ -120,12 +120,12 @@ Run subtasks in parallel waves, respecting `blocked_by`.
 
 - `executor` / `debugger` / `designer` / `writer` / `test-engineer` (implementation-flavored roles): default to Codex, since cost is not a constraint and Sol is the Codex default for implementation work:
   ```
-  Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<worker-preamble + task description + acceptance criteria + paths>' < /dev/null", run_in_background=true)
+  Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<worker-preamble + task description + acceptance criteria + paths>' < /dev/null", run_in_background=true)
   ```
   Then collect output via `TaskOutput`. Fall back to Claude `Task(subagent_type="general-purpose", model="<sonnet|opus|haiku>", ...)` only when the Codex CLI is unavailable/errors, or the subtask needs in-session tools Codex's sandbox cannot reach.
 - `codex` (explicit opt-in, same mechanism as above but named directly by the user):
   ```
-  Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<full task prompt>' < /dev/null", run_in_background=true)
+  Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<full task prompt>' < /dev/null", run_in_background=true)
   ```
   Then collect output via `TaskOutput`.
 - `gemini`:
@@ -162,7 +162,7 @@ After all subtasks reach `completed` or `failed`:
 1. Run `Task(general-purpose, model=sonnet)` as `verifier`. Prompt: "Verify subtasks T1-Tn against their acceptance criteria. For each, run the explicit check listed and report pass/fail with evidence."
 2. For security-sensitive changes (auth, crypto, secrets) or changes touching 20+ files, additionally run:
    - `Task(general-purpose, model=opus)` as `code-reviewer`. Keep this on Claude/Opus deliberately, even though execution defaults to Sol: a reviewer sharing the implementer's model lineage under-catches its own blind spots (self-preference bias).
-   - Optionally `codex-exec-bg.sh -m gpt-5.6-sol` as an independent critic (mirrors what `second-opinion` does, but scoped to the team output).
+   - Optionally `codex-exec-bg.sh -m gpt-6.1-sol` as an independent critic (mirrors what `second-opinion` does, but scoped to the team output).
 
 If everything passes, exit successfully.
 

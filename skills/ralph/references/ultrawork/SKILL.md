@@ -49,7 +49,7 @@ This is the parallelism layer. It does not own persistence (use `ralph` for that
 4. **Build a small task graph for non-trivial work.** Wave 1 = independent tasks. Wave 2 = depends only on wave 1. Etc. For each task, write a 1-line acceptance criterion.
 5. **Route to model tiers:**
    - Simple lookups, type exports, doc tweaks, small fixes → Haiku.
-   - Standard implementation, multi-file edits, focused refactors, complex multi-system analysis, architecture-changing refactors, hard debugging → **Codex `gpt-5.6-sol`** (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<task>' < /dev/null", run_in_background=true)`). Cost is not a constraint; Sol is the default for real implementation work regardless of complexity tier. Fall back to Claude `Task(general-purpose, model=sonnet|opus, ...)` only when the Codex CLI is unavailable/errors, or the task needs in-session tools Codex's sandbox cannot reach.
+   - Standard implementation, multi-file edits, focused refactors, complex multi-system analysis, architecture-changing refactors, hard debugging → **Codex `gpt-6.1-sol`** (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<task>' < /dev/null", run_in_background=true)`). Cost is not a constraint; Sol is the default for real implementation work regardless of complexity tier. Fall back to Claude `Task(general-purpose, model=sonnet|opus, ...)` only when the Codex CLI is unavailable/errors, or the task needs in-session tools Codex's sandbox cannot reach.
 6. **Fire wave 1 simultaneously.** All independent tasks in the same message.
 7. **Wait for dependencies to clear**, then fire wave 2. Repeat.
 8. **Background long ops.** Builds, installs, full test suites use `Bash` with `run_in_background: true`. Track output with `TaskOutput`.
@@ -64,7 +64,7 @@ This is the parallelism layer. It does not own persistence (use `ralph` for that
 ## Tool usage
 
 - `Task(subagent_type="general-purpose", model="haiku", prompt=...)` for simple changes.
-- `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- '<task>' < /dev/null", run_in_background=true)` for standard and complex implementation work (default). The wrapper redirects stdin from /dev/null internally (a raw backgrounded `codex exec` without that redirect hangs indefinitely; verified 2026-07-13).
+- `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<task>' < /dev/null", run_in_background=true)` for standard and complex implementation work (default). The wrapper redirects stdin from /dev/null internally (a raw backgrounded `codex exec` without that redirect hangs indefinitely; verified 2026-07-13).
 - `Task(subagent_type="general-purpose", model="sonnet"|"opus", prompt=...)` as the fallback for standard/complex work when Codex CLI is unavailable or the task needs in-session-only tools.
 - `Bash(command=..., run_in_background=true)` for package installs, builds, test suites longer than ~30s.
 - Foreground `Bash` and direct file tools for quick checks.
@@ -77,8 +77,8 @@ This is the parallelism layer. It does not own persistence (use `ralph` for that
 
 ```
 Task(general-purpose, model=haiku, "Add missing type export for Config interface in src/types/config.ts")
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- 'Implement the GET /api/users endpoint with input validation in src/api/users.ts' < /dev/null", run_in_background=true)
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --sandbox workspace-write -- 'Add integration tests for the auth middleware in tests/auth.test.ts' < /dev/null", run_in_background=true)
+Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- 'Implement the GET /api/users endpoint with input validation in src/api/users.ts' < /dev/null", run_in_background=true)
+Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- 'Add integration tests for the auth middleware in tests/auth.test.ts' < /dev/null", run_in_background=true)
 ```
 
 Independent tasks at appropriate tiers, all fired in one message. The trivial one stays on Haiku; the two substantive ones default to Sol.

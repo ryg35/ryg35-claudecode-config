@@ -167,7 +167,7 @@ Fire all N workers as background `Bash` jobs in one message:
 Bash("claude -p \"$(cat .claude/omc-teams/<slug>/W1/prompt.md)\" > .claude/omc-teams/<slug>/W1/stdout.log 2>&1",
      run_in_background=true,
      description="Launch worker W1 (claude)")
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --skip-git-repo-check -- \"$(cat .claude/omc-teams/<slug>/W2/prompt.md)\" < /dev/null > .claude/omc-teams/<slug>/W2/stdout.log 2>&1",
+Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --skip-git-repo-check -- \"$(cat .claude/omc-teams/<slug>/W2/prompt.md)\" < /dev/null > .claude/omc-teams/<slug>/W2/stdout.log 2>&1",
      run_in_background=true,
      description="Launch worker W2 (codex)")
 Bash("gemini -p \"$(cat .claude/omc-teams/<slug>/W3/prompt.md)\" > .claude/omc-teams/<slug>/W3/stdout.log 2>&1",
@@ -178,7 +178,7 @@ Bash("gemini -p \"$(cat .claude/omc-teams/<slug>/W3/prompt.md)\" > .claude/omc-t
 Note the exact invocation per provider:
 
 - `claude -p "<prompt>"`: non-interactive mode.
-- `~/.claude/scripts/codex-exec-bg.sh -m gpt-5.6-sol --skip-git-repo-check -- "<prompt>"`: non-interactive exec mode (the wrapper redirects stdin from /dev/null internally). Defaults to Sol; cost is not a constraint for worker execution. A raw `codex exec` without stdin redirection inherits a stdin that never reaches EOF and hangs indefinitely waiting for "additional input from stdin", even though the prompt was already supplied as an argument. Verified 2026-07-13 (6+ min hang without it, seconds with it).
+- `~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --skip-git-repo-check -- "<prompt>"`: non-interactive exec mode (the wrapper redirects stdin from /dev/null internally). Defaults to Sol; cost is not a constraint for worker execution. A raw `codex exec` without stdin redirection inherits a stdin that never reaches EOF and hangs indefinitely waiting for "additional input from stdin", even though the prompt was already supplied as an argument. Verified 2026-07-13 (6+ min hang without it, seconds with it).
 - `gemini -p "<prompt>"`: non-interactive prompt mode.
 
 Each worker's stdout goes to its own log file so they don't interleave.
