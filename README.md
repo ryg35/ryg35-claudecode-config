@@ -10,6 +10,9 @@ Claude Code(`~/.claude/`)向けの設定一式(MIT)。作者が実際に使っ�
 - **書く側と審査する側でモデルを分ける**: 実装と計画は Codex(`gpt-6.1-sol`)、最終審査は Claude Opus。同じモデルに自己承認させない
 - **新規プロジェクトの立ち上げ**: docs・CI・E2E の雛形を一括で作る
 - **受入基準を先に固める SPEC駆動開発**: `specs/<NNN>-<slug>/` に spec / plan / tasks を置いて実装する
+- **画面を変えたら、変更箇所に黄色の枠と番号付きの注記を入れたスクショをチャットに出す**: 文章の説明だけで済ませず、見れば承認できる形で返す([`rules/ui-change-screenshots.md`](./rules/ui-change-screenshots.md)、撮影は [`scripts/ui-shot.mjs`](./scripts/ui-shot.mjs))
+
+  ![変更箇所に黄色の枠と注記を入れたスクショの例](./scripts/ui-shot-example-f1weather.png)
 
 中身は command 20本、agent 32本、skill 27本、開発規範(`rules/`)、hook。全部入れても、欲しいファイルだけ持ち帰っても動く。
 
