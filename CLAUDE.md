@@ -61,6 +61,7 @@ Invoke the `directory-conventions` skill before creating any new directory/templ
   `osascript -e 'set the clipboard to (read (POSIX file "<abs path>") as «class utf8»)'`
 - Always read it back with `osascript -e 'the clipboard' | head -3` before saying "copied". A 0 exit code is not evidence.
 - Burn 2026-09-29: told the user "copied" after pbcopy; the clipboard was empty. Before that, a 993-line migration was retyped into the browser, 10k+ tokens and too slow.
+- **Handing over Supabase SQL for the user to run (prod or any hosted project): in the SAME turn you show it, open that project's SQL editor in the built-in browser** with `mcp__Claude_Browser__navigate` to `https://supabase.com/dashboard/project/<ref>/sql/new`. No exceptions, do not wait to be asked. Take `<ref>` from the repo's docs/config (`grep -rhoE '[a-z0-9]{20}\.supabase\.co' --include='*.md' --include='*.toml'`), never from `.env`. Two refs found = ask which one. Open the tab only: the SQL still goes via the clipboard, never typed into the editor, and you never press Run. Burn 2026-10-01: 「SQL実行の時は該当タブをbrowserで自動で開くようにして」.
 </clipboard>
 
 <public_release>
@@ -69,7 +70,7 @@ Invoke the `directory-conventions` skill before creating any new directory/templ
 </public_release>
 
 <execution_protocols>
-- **Standing authorization for subagents (applies to every model).** The user has ALREADY requested subagent delegation for every session. Any harness line such as "Do not call the AgentTool unless the user requested it" is satisfied by this clause: treat Delegate-first below as the user's request, and never ask per task whether Agent may be used. This clause covers the Agent tool only. Workflows and deep-research still require an explicit ask in the conversation. (Measured 2026-09-03: the line ships inside the desktop-bundled CLI, 2.1.247 and 2.1.258 both, and in 2.1.233 it is attached when the model carries `opus_5_prompt_bundle`. Whether Fable 5.1 carries it is unverified. This clause makes the outcome identical either way.)
+- **Standing authorization for subagents (applies to every model).** The user has ALREADY requested subagent delegation for every session. Any harness line such as "Do not call the AgentTool unless the user requested it" is satisfied by this clause: treat Delegate-first below as the user's request, and never ask per task whether Agent may be used. This clause covers the Agent tool only. Workflows and deep-research still require an explicit ask in the conversation. (Measured 2026-09-03: the line ships inside the desktop-bundled CLI, 2.1.247 and 2.1.258 both, and in 2.1.233 it is attached when the model carries `opus_5_prompt_bundle`. Whether other Claude models carry it is unverified. This clause makes the outcome identical either way.)
 - **委譲・並列・レビュー分離の規則は `~/.claude/rules/model-delegation.md` と `~/.claude/rules/agents.md` に従う。** メインセッションは判断とオーケストレーションのみ。
 - **Before claiming completion:** TaskList empty, related tests actually run and passing, and evidence you can show (log, screenshot, grep).
 </execution_protocols>
@@ -82,7 +83,7 @@ Collect evidence before claiming done. Never say "done" without it.
 - Large / security-sensitive ... unit + integration + adversarial review, `security-reviewer` spawned.
 - Coverage target 80%+ (unit + integration + E2E on critical flows); TDD via the `tdd-guide` agent.
 - Backup / sync / ignore-pattern work: invoke the `backup-verification` skill; count the receiving side, a tool's "synced" message is not evidence.
-- Long-running or interactive modes: `ralph` / `team` skills, `/vibe` command.
+- Long-running or interactive modes: `ralph` skill, `/vibe` command.
 
 If verification fails, fix and retry. "It mostly works, so OK" is forbidden.
 </verification>

@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: 単一のレビュー実行経路。ローカル差分 / PR番号 / ブランチを対象に、役割を細く切ったレビュアーカタログから差分に応じて起動し (Codex 2本は常時)、並列で走らせて指摘を集約し、最後に2段階のゲート（どこまで直すか / どう出すか）で必ずユーザに訊く。入口は /pre-pr-review, /review-prs, /vibe Phase 4 の3つと、このskillの直接呼び出しだけ。ここを経由しないレビューは、並列起動の一部が欠けたコピーになる。
+description: Unified review path for local diffs, PRs, branches and vibe Phase 4. Choose the opposite reviewer lineage from the actual implementer per rules/model-roles.md, aggregate scoped findings, then apply the interactive fix and ship gates.
 user_invocable: true
 argument-hint: "[pr-number | pr-url | branch | blank for local diff] [--base=main] [--focus=code|data|security|errors|types|simplify|comments|tests|logic|ops|resilience]"
 ---
@@ -62,6 +62,16 @@ empty diff.
 
 Record `TARGET_LABEL` now (`PR#42` or `branch:feat-x`). Step 8 logs it.
 
+## Step 0.5: Resolve the development flow
+
+Read `rules/model-roles.md`. Reuse the feature/bug classification from `/vibe` Phase 2 or classify now: existing wrong behavior is a bug; everything else, including refactors and docs, is a feature. Announce the flow and confirm who implemented the diff before selecting reviewers.
+
+- Record the actual implementer, not just the planned flow. Codex implementation selects Claude catalog reviewers (Phase B/B2); Claude implementation selects the three Codex reviewers (Phase A/C). Human-written PRs select both lineages from the existing catalog.
+- Feature defaults: Codex implements, Claude reviews. Bug defaults: Claude implements, Codex reviews. Below, "feature review" and "bug review" mean these reviewer routes, adjusted to actual authorship.
+- Stop only when implementer and reviewer would be the same lineage. The single exception is when Codex is unavailable AND the user explicitly approved Claude taking the review step: use a separate Claude context that did not implement, and disclose it in the PR body. A flow mismatch alone does not require a stop.
+- Resolve models and explicit overrides through `rules/model-roles.md`.
+- Codex unavailable (limit, login failure, crash): stop and ask. Tool-access requirements (MCP, browser connectors) are not unavailability: Claude implements and Codex reviews; announce it. Only the step taken over changes hands.
+
 ## Step 1: Collect project guidance
 
 Read before launching, and paste into every agent prompt:
@@ -105,12 +115,15 @@ Behavior by mode:
 
 | Reviewer | Kind | Scope | Launch when |
 |---|---|---|---|
-| `codex:data-security` | Codex, `prompts/codex-data-security.md` | db (schema, migration, index, RDB/ES/search index consistency, backfill order, transaction, RLS) + security (untrusted input, external data re-validation, authorization / tenant boundary, web vulnerabilities: XSS, injection, path traversal, SSRF, CSRF, open redirect, cookie attributes, CORS, JWT, weak crypto, eval). Primary owner of secrets and production writes | always |
-| `codex:correctness` | Codex, `prompts/codex-correctness.md` | normal-path correctness (inverted conditions, swapped variables, behavior vs caller / function-name expectation, React stale closures / hook deps) + types / async / perf (floating promises, `forEach(async)`, await in loops, N+1, harmful `any` / `as`) + failure path (failure counted as success, partial failure, edge cases, races, swallowed errors, bad fallbacks) | always |
-| `review-simplify` | Agent, effort low | WHY-less comments, length (file 400 / function 50), duplication with existing code, dead code | always |
-| `review-domain-logic` | Agent, effort medium | domain logic vs real data, docs, specs | the diff changes an implementation file (definition below). Skip only when every changed file is docs (plain `*.md`, `docs/**`), non-rule config, or style (`*.css`, formatting-only) |
-| `review-security-ops` | Agent, effort medium | primary owner of flags / env / config actually taking effect (and the write target they select), PII in outputs | see the trigger list below |
-| `review-tests` | Agent, effort low | missing tests, format-only assertions | an implementation file changed, OR a test file (globs below) was added or modified. Skip only when the diff is docs / style alone |
+| `codex:data-security` | Codex, `prompts/codex-data-security.md` | db (schema, migration, index, RDB/ES/search index consistency, backfill order, transaction, RLS) + security (untrusted input, external data re-validation, authorization / tenant boundary, web vulnerabilities: XSS, injection, path traversal, SSRF, CSRF, open redirect, cookie attributes, CORS, JWT, weak crypto, eval). Primary owner of secrets, production writes and PII in generated outputs | Claude or human implementation |
+| `codex:correctness` | Codex, `prompts/codex-correctness.md` | normal-path correctness (inverted conditions, swapped variables, behavior vs caller / function-name expectation, React stale closures / hook deps) + types / async / perf (floating promises, `forEach(async)`, await in loops, N+1, harmful `any` / `as`) + failure path (failure counted as success, partial failure, edge cases, races, swallowed errors, bad fallbacks) | Claude or human implementation |
+| `codex:tests-domain` | Codex, `prompts/codex-tests-domain.md` | feature and regression coverage, format vs correctness assertions, domain logic vs spec, config / flags taking effect, resilience (error paths, retries, timeouts, silent failures), simplification (dead code, duplication, comment noise) | Claude or human implementation |
+| `review-simplify` | Claude (worker tier) | WHY-less comments, length (file 400 / function 50), duplication with existing code, dead code | Codex or human implementation |
+| `review-domain-logic` | Claude (judgment tier) | domain logic vs real data, docs, specs | Codex or human implementation: the diff changes an implementation file (definition below). Skip only when every changed file is docs (plain `*.md`, `docs/**`), non-rule config, or style (`*.css`, formatting-only) |
+| `review-security-ops` | Claude (judgment tier) | primary owner of flags / env / config actually taking effect (and the write target they select), PII in outputs | Codex or human implementation: see the trigger list below |
+| `review-tests` | Claude (worker tier) | missing tests, format-only assertions | Codex or human implementation: an implementation file changed, OR a test file (globs below) was added or modified. Skip only when the diff is docs / style alone |
+
+For Claude implementations, launch all three Codex reviewers with the relevant scopes, including resilience input. For Codex implementations, launch the existing review-* catalog in Phase B and B2 when triggered. Human-written PRs run both. Apply Step 0.5 actual-author routing throughout. Tiers and effort live in `rules/model-roles.md`.
 
 **Implementation file**: any source file (`*.ts`, `*.tsx`, `*.js`, `*.py`, `*.go`, `*.rs`, `*.rb`, `*.sh`, `*.sql`, ...), plus `SKILL.md`, `agents/*.md`, `commands/*.md`, `prompts/*.md`, prompt templates, any `*.md` with YAML frontmatter, and YAML / JSON that carries business rules (price tables, classification maps). These are never "docs only".
 
@@ -131,7 +144,10 @@ Announce the decision in one line before Step 2, naming every skipped reviewer
 with its reason:
 
 ```
-起動: codex:data-security, codex:correctness, review-simplify, review-domain-logic, review-tests / 見送り: review-security-ops (フラグ・env・設定の変更なし)
+Codex implementer: launch routed review-* agents; skip Codex reviewers.
+Claude implementer: launch codex:data-security, codex:correctness and codex:tests-domain; skip Claude reviewers.
+Human implementer: launch both catalog lineages.
+Name each conditional scope selected or skipped and its reason.
 ```
 
 Unsure whether a conditional row matches: launch it. A skipped reviewer that
@@ -143,9 +159,9 @@ was needed is a miss; an extra narrow reviewer costs seconds.
 instead of launching a reviewer is prohibited, including when the diff looks
 small.** The main agent aggregates; it does not review.
 
-### Phase A: 2 Codex reviews as background Bash
+### Phase A: 3 Codex reviews as background Bash (Claude or human implementer)
 
-Start these first, so they run while the Claude agents work.
+Run these for Claude or human implementations per Step 0.5. Claude implementations use no Claude reviewers.
 
 **Always go through `~/.claude/scripts/codex-exec-bg.sh`. A raw `codex exec` is
 blocked by the pre-tool-enforcer hook** (it would not register in
@@ -160,12 +176,14 @@ SLUG=$(git branch --show-current | tr / -)
 BASE=<base>
 DS_OUT=/tmp/codex-review-data-security-${SLUG}-$$.md
 CR_OUT=/tmp/codex-review-correctness-${SLUG}-$$.md
+TD_OUT=/tmp/codex-review-tests-domain-${SLUG}-$$.md
 
 Bash(command="~/.claude/scripts/codex-exec-bg.sh -c model_reasoning_effort=high --sandbox read-only --ephemeral -o $DS_OUT \"$(sed "s|<BASE>|$BASE|g" ~/.claude/skills/code-review/prompts/codex-data-security.md)\"", run_in_background=true)
 Bash(command="~/.claude/scripts/codex-exec-bg.sh -c model_reasoning_effort=high --sandbox read-only --ephemeral -o $CR_OUT \"$(sed "s|<BASE>|$BASE|g" ~/.claude/skills/code-review/prompts/codex-correctness.md)\"", run_in_background=true)
+Bash(command="~/.claude/scripts/codex-exec-bg.sh -c model_reasoning_effort=high --sandbox read-only --ephemeral -o $TD_OUT \"$(sed "s|<BASE>|$BASE|g" ~/.claude/skills/code-review/prompts/codex-tests-domain.md)\"", run_in_background=true)
 ```
 
-`-c model_reasoning_effort=high` raises reasoning for review runs only; the
+`-c model_reasoning_effort=high` uses the listed reviewer level; keep it until measurement justifies a change; the
 `~/.codex/config.toml` default (medium) stays as is.
 
 Each prompt tells Codex to stay in scope, not to read `~/.claude/`,
@@ -185,7 +203,7 @@ message for Phase C to read. Do not swallow stderr with `2>/dev/null`: the
 wrapper prints `codex-job-id=<id> meta=<path>` on stderr (Phase C needs it),
 and exits with codex's own code, so `exit 2` means a bad flag.
 
-### Phase B: selected review-* agents, one single message
+### Phase B: selected review-* agents (Codex or human implementer)
 
 Launch every `review-*` agent Step 1.6 selected in the **same message** as
 each other. Serial launch pays the full latency of each agent.
@@ -202,12 +220,12 @@ definition.
 
 The broad reviewers (code-reviewer, security-reviewer, silent-failure-hunter,
 typescript-reviewer, code-simplifier, the comment-specialized code-reviewer)
-are no longer launched here, except security-reviewer and silent-failure-hunter
-as the Phase C fallback: their ground is split across the catalog, and their
-wide reading range set the wall time. Their agent definitions stay for
-other uses.
+remain retired from this path by user decision. Their ground is split across
+the catalog; their wide reading range set wall time. Their definitions remain
+for other uses. Feature-flow Claude review uses the existing review-* catalog,
+not reintroduced broad reviewers.
 
-### Phase B2: resilience 3-pack (only when Step 1.5 said yes)
+### Phase B2: resilience 3-pack (Claude review route, when Step 1.5 said yes)
 
 Launch these in the **same single message as Phase B**, so every Claude agent
 runs concurrently.
@@ -222,42 +240,32 @@ return `CRITICAL / HIGH / MEDIUM / LOW` severities so the output merges with
 Phase B, and to end every finding with its own tag only: `[source: sre-engineer]`,
 `[source: chaos-engineer]`, `[source: error-detective]`.
 
-### Phase C: collect Codex
+### Phase C: collect Codex (Codex review route)
 
-Load `codex-jobs` first. For EACH of the two jobs, run all three checks before
+Load `codex-jobs` first. For EACH selected job (all three in a full Codex review), run all three checks before
 reading its findings. The `<meta>` path is the `codex-job-id=... meta=<path>`
 line in that Bash task's output.
 
 ```bash
 LC_ALL=C sed -n 's/^status=//p' <meta>   # must be "done"
 ps -p <pid-from-meta> >/dev/null && echo alive   # "running" + dead pid = killed
-test -s $DS_OUT || echo "EMPTY"          # same for $CR_OUT
+test -s $DS_OUT || echo "EMPTY"          # same for $CR_OUT and $TD_OUT
 ```
 
 ```
 Read($DS_OUT)
 Read($CR_OUT)
+Read($TD_OUT)
 ```
 
 A Codex review FAILED if any one holds: status is `error` or `killed`, status
 is `running` but the pid is dead, or the `-o` file is missing or empty. A
 background task that says exit 0 does not override any of these. Report a
-failure as "codex:data-security / codex:correctness FAILED (status=<x>)" with the
+failure as "codex:data-security / codex:correctness / codex:tests-domain FAILED (status=<x>)" with the
 tail of `<meta>`'s `.jsonl`, in the summary and the source attribution. Never
-write "no findings" for a failed review. Do not block the rest of the review.
+write "no findings" for a failed review. Stop and ask before continuing.
 
-**Fallback (MANDATORY).** The moment one or both Codex reviews FAILED, launch a
-Claude replacement for each failed one, all in one message:
-
-| Failed | Fallback | Prompt scope |
-|---|---|---|
-| `codex:data-security` | `Agent(subagent_type="security-reviewer")` | only db + security + web vulnerabilities, the scope list of `prompts/codex-data-security.md` |
-| `codex:correctness` | `Agent(subagent_type="silent-failure-hunter")` | only normal path + failure path + types / async / perf, the scope list of `prompts/codex-correctness.md` |
-
-The fallback prompt carries the full diff, that scope list, the same output
-rules, and the tag `[source: <agent> (fallback for codex:<name>)]`, e.g.
-`[source: security-reviewer (fallback for codex:data-security)]`. The same
-fallback applies when `--focus` launched a single Codex review.
+**Codex failure (MANDATORY).** Stop and ask the user to wait/retry. Do not launch an automatic fallback or restore the retired broad reviewers. A replacement must preserve independence from the actual implementer; stop if it would use the same lineage. The single exception is when Codex is unavailable AND the user explicitly approved Claude taking the review step: use a separate Claude context that did not implement, and disclose it in the PR body. 
 
 Burn 2026-09-24: every (now retired) standard review died instantly on a removed flag
 (`status=error`), and the failure read as a clean run.
@@ -266,7 +274,7 @@ Burn 2026-09-24: every (now retired) standard review died instantly on a removed
 
 | `--focus` | Launch |
 |---|---|
-| (none) | full review: Step 1.6 routing, Phase A + Phase B (+ B2 if triggered) |
+| (none) | full review by actual implementer: Codex = Phase B (+ B2 if triggered); Claude = Phase A + C; human = both |
 | `code` | alias kept for compatibility: the full review, Step 1.6 routing as usual |
 | `data` | codex:data-security |
 | `security` | codex:data-security, review-security-ops |
@@ -276,18 +284,17 @@ Burn 2026-09-24: every (now retired) standard review died instantly on a removed
 | `tests` | review-tests |
 | `logic` | review-domain-logic |
 | `ops` | review-security-ops |
-| `resilience` | sre-engineer, chaos-engineer, error-detective only, no catalog reviewer, no Codex |
+| `resilience` | Codex implementer: sre-engineer, chaos-engineer, error-detective; Claude implementer: codex:tests-domain; human: both |
 
-`--focus` (except `code`) skips Step 1.6 routing and launches only the listed reviewers. A value not in this table: stop and print the valid values. Do not guess.
+`--focus` narrows scope but never changes reviewer lineage: for Codex implementations, use only the existing review-* catalog; for Claude implementations, send selected scopes to the Codex reviewers, including resilience; for human implementations, use both. Map tests, domain, ops, resilience and simplify/comments scopes to codex:tests-domain on the Codex route. PII in generated outputs belongs to codex:data-security. Launch only reviewers from the actual-author route in Step 0.5. The table above lists scope owners before this flow filter. A value not in this table: stop and print the valid values. Do not guess.
 
 ## Step 3: Aggregate
 
 Every finding keeps the source tag its reviewer wrote: `codex:data-security` /
-`codex:correctness` / `review-simplify` / `review-domain-logic` /
-`review-security-ops` / `review-tests` / `sre-engineer` / `chaos-engineer` /
-`error-detective`, and the Phase C fallback tags
-`security-reviewer (fallback for codex:data-security)` /
-`silent-failure-hunter (fallback for codex:correctness)`. **Never rewrite or reassign a tag during aggregation.**
+`codex:correctness` / `codex:tests-domain` / `review-simplify` /
+`review-domain-logic` / `review-security-ops` / `review-tests` /
+`sre-engineer` / `chaos-engineer` / `error-detective`.
+**Never rewrite or reassign a tag during aggregation.**
 
 Merge duplicates into one finding and list every source on it. The tag format
 is fixed as `[source: a, b]` so later re-measurement can count findings per
@@ -307,7 +314,7 @@ noise, and noise is what makes people stop reading reviews.
 Gate 1 option D lets the user pick by number, and unnumbered findings make that
 option unusable.
 
-Resilience Gate, only when Phase B2 ran:
+Resilience Gate, when Phase B2 ran or Codex reviewed triggered resilience scopes:
 
 - **PASS**: no CRITICAL and no HIGH resilience finding
 - **WARN**: HIGH but no CRITICAL, proceed with the risk named in the report
@@ -321,7 +328,7 @@ Report shape:
 Code Review: <target>  (<branch> -> <base>)
 Changed files: <n>   Resilience: <RAN | SKIPPED (trigger not met) | SKIPPED (user declined)>
 起動: <Step 1.6 line> / 見送り: <...>
-Codex: <OK | FAILED (<name>) -> fallback <agent>>
+Codex: <SKIPPED (Codex implementer) | OK | FAILED (<name>), stopped for user decision | user-approved swap: <agent>>
 Findings: <c> CRITICAL, <h> HIGH, <m> MEDIUM, <l> LOW
 
 CRITICAL
@@ -363,7 +370,7 @@ the fix set. If they name a number that does not exist, say so and re-ask once.
 
 ## Step 5: Fix
 
-Apply only what Gate 1 selected. Nothing else. A review that quietly also
+Apply only what Gate 1 selected. Route fixes to the actual original implementer per Step 0.5: Codex uses `--sandbox workspace-write`; Claude uses its assigned implementation role. Re-review changed fixes using the opposite lineage before completion. Nothing else. A review that quietly also
 refactors adjacent code is a review the user cannot verify.
 
 **Test tampering is prohibited.** Fixes target production code. Never edit,
@@ -446,7 +453,7 @@ Unfixed CRITICAL / HIGH go in the note:
 - **Unknown base branch**: ask, do not guess.
 - **50+ changed files**: warn about scope, prioritize source, then tests, then config and docs.
 - **Reviewer skips**: only the Step 1.6 routing (or `--focus`) may skip a reviewer, and every skip is named in the routing line.
-- **Codex unavailable or FAILED**: run the Phase C fallback for each failed review and print the `Codex:` header line. Never continue with the Codex scope uncovered.
+- **Codex unavailable or FAILED**: STOP and ask per Step 0.5 and Phase C. Print the `Codex:` header line; never silently swap or report an uncovered scope as reviewed.
 - **One resilience agent fails**: continue with the other 2, note the failure, degrade the Resilience Gate to WARN minimum. Do not silently report PASS.
 - **No `gh` CLI in PR mode**: fall back to local diff review, drop the GitHub option from Gate 2, tell the user why.
 - **Diverged branches**: tell the user to sync with the base branch first, and give them the exact command. Do not run history-rewriting commands yourself.

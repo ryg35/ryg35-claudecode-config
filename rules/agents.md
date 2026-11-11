@@ -11,7 +11,8 @@ Roster lives in `~/.claude/agents/*.md`; the Agent tool lists them.
 
 - Codex runs ONLY via `~/.claude/scripts/codex-exec-bg.sh` with Bash `run_in_background: true`. Never hand-roll `codex exec ... &`.
 - Before touching or reporting on a codex job, invoke the `codex-jobs` skill (five burns there).
-- Codex model is `gpt-6.1-sol` (the `~/.codex/config.toml` default, effort medium). NEVER pass `-m gpt-6-astra` unless the user names Astra in the conversation. Burn 2026-09-19: Astra at effort low took the Pro Lite weekly limit from 37% to 100% in 3 hours, about 2.7x Sol ultra per token.
+- Codex reads its model from ~/.codex/config.toml; see rules/model-roles.md. Resolve explicit overrides through rules/model-roles.md.
+- Burn 2026-09-19: Astra at effort low took the Pro Lite weekly limit from 37% to 100% in 3 hours, about 2.7x Sol ultra per token.
 - Agreeing a plan with Codex: run the `plan` skill with `--consensus`, then the `second-opinion` skill for an independent Codex pass.
 
 ## Long-running processes (subagents and your own Bash)
@@ -57,3 +58,5 @@ Scheduled-task sessions (Claude Desktop) keep their process alive after finishin
 
 - Authoring and review are separate passes. No self-approval in the same context: `critic` for design, `verifier` for evidence, `code-reviewer` for code.
 - Builds, test suites, and large greps go to `run_in_background`; keep working while they run.
+- When an agent stalls or repeats a failure, do not retry with reworded prompts; that is the loop. In order: restate the goal in one sentence, verify the actual state instead of trusting memory, shrink the scope, run one discriminating check, and only then retry.
+- Before the retry, report what failed, the evidence, and what was changed.

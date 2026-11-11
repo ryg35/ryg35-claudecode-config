@@ -4,10 +4,14 @@ description: PRD-driven persistence loop that keeps working until every user sto
 user_invocable: true
 argument-hint: "[--no-deslop] [--critic=architect|critic|codex] <task description>"
 ---
-> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/`、omc-teams / sciomc は `skills/team/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
+
+Follow `rules/model-roles.md` for every design, implementation and review step. Feature: Claude designs, Codex implements, Claude reviews. Bug: Codex designs, Claude implements, Codex reviews. Select reviewers from the actual implementer's opposite lineage; human-written PRs use both catalog lineages. Verification uses `Task(subagent_type="verifier")` on Claude in both flows and is an evidence check, not review. If Codex is unavailable (limit, login failure, crash), stop and ask. Tool access outside Codex's sandbox (MCP, browser connectors, etc.) is not unavailability: Claude implements and Codex reviews; announce that routing. Only the step taken over changes hands. Resolve model selection and any explicit override through `rules/model-roles.md`.
+
+> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
 
 
 # Ralph Skill (/ralph)
+
 
 ## Purpose
 
@@ -84,11 +88,11 @@ Each iteration:
 1. **Pick next story.** Read `.claude/ralph/prd.json` and select the highest-priority story with `passes: false`.
 
 2. **Implement the story.**
-   - Default to Codex for the actual implementation: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<story + acceptance criteria>'")`. Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. This is the primary path for standard and complex implementation work. If backgrounding this call (see below), append `< /dev/null` to the command.
-   - Fall back to `Task` with Claude model tiers when the Codex CLI is unavailable/errors, or when the story needs in-session tools Codex's sandbox cannot reach (MCP connectors, browser automation, etc.):
-     - Trivial lookup: `general-purpose` agent (Haiku default).
-     - Standard implementation: `general-purpose` (Sonnet).
-     - Complex multi-file refactor: `general-purpose` with explicit Opus routing if available.
+   - For features, use Codex for implementation; for bugs, use Claude. Feature invocation: `Bash("~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- '<story + acceptance criteria>'")`. This is the primary path for standard and complex implementation work. If backgrounding this call (see below), append `< /dev/null` to the command.
+   - If Codex is unavailable, stop and ask. If tools require Claude, announce Claude implementation and Codex review. Claude implementation tiers:
+     - Trivial lookup: `general-purpose` agent (worker tier).
+     - Standard implementation: `general-purpose` (judgment tier).
+     - Complex multi-file refactor: `general-purpose` with judgment-tier routing if available.
    - For long ops (installs, builds, full test runs, or any backgrounded `codex exec`), use `Bash` with `run_in_background: true` and check back with `TaskOutput`. **Backgrounded raw `codex exec` needs a trailing `< /dev/null`, but the mandatory wrapper `codex-exec-bg.sh` already redirects stdin internally so no manual redirect is needed**: without it, the process inherits a stdin that never reaches EOF and hangs indefinitely waiting for "additional input from stdin" even though the prompt was already supplied as an argument (verified 2026-07-13: 6+ min hang without it, seconds with it).
    - If you discover a sub-task mid-implementation, add it as a new story in `prd.json`.
 
@@ -110,11 +114,11 @@ Each iteration:
 
 ## Phase 3: Reviewer sign-off
 
-Pick the reviewer based on `--critic=...`:
+Select by actual implementer first: feature defaults to Claude review of Codex implementation; bug defaults to Codex review of Claude implementation. `--critic` selects the review style only within that independent lineage. Stop if it would select the implementing lineage.
 
-- `--critic=architect` (default): use the `Task` tool with a general-purpose agent prompted as a senior architect reviewer.
-- `--critic=critic`: use a general-purpose agent prompted as a harsh quality critic.
-- `--critic=codex`: shell out to Codex via `Bash`:
+- Feature `--critic=architect` (default): use `Task(subagent_type="architect")`.
+- Feature `--critic=critic`: use `Task(subagent_type="critic")`.
+- Bug review (or any actual Claude implementation): shell out to Codex via `Bash`:
   ```bash
   ~/.claude/scripts/codex-exec-bg.sh --skip-git-repo-check -- "<critic prompt>"
   ```
@@ -275,12 +279,12 @@ These do not constrain anything. Replace them before grinding.
 
 ### Good: parallel delegation
 
-Three independent tasks fired in one message. The default path shells out to Codex for the substantive work; the trivial one stays on Haiku since Sol would be overkill:
+Three independent tasks fired in one message. The feature example shells out to Codex for the substantive work; the trivial one stays with Claude (worker tier) since Codex would be overkill:
 
 ```
-Task(general-purpose, model=haiku, "Add type export for UserConfig in src/types/user.ts")
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- 'Implement caching layer in src/cache/api-cache.ts'")
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- 'Refactor auth module in src/auth/ to support OAuth2'")
+Task(general-purpose, "Add type export for UserConfig in src/types/user.ts")
+Bash("~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- 'Implement caching layer in src/cache/api-cache.ts'")
+Bash("~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- 'Refactor auth module in src/auth/ to support OAuth2'")
 ```
 
 ### Bad: claiming done without evidence

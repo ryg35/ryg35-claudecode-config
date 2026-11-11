@@ -14,7 +14,7 @@ rules, which the agent definition does not carry:
   cause before patching types, so the fix is not a cosmetic cast.
 - Library or framework errors: look up current docs with the
   `documentation-lookup` skill (Context7) instead of guessing an API.
-- Same error surviving 3 attempts: stop and switch to the
-  `agent-introspection-debugging` skill. Still stuck after that, ask the user.
+- Same error surviving 3 attempts: stop and follow the stall-recovery
+  order in `rules/agents.md` Guidelines. Still stuck after that, ask the user.
 
 Report the agent's summary: errors fixed, errors left, new errors introduced.

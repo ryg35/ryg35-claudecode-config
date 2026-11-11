@@ -6,15 +6,11 @@ model: claude-opus-5-5
 effort: medium
 ---
 
-## Routing (Sol-centric)
+## Caller routing (not for the executing agent)
 
-Default execution path for this role is Codex, not the Claude `Agent` tool:
+Do NOT invoke Codex or re-delegate yourself; do the task you were given.
 
-```
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '<this file's instructions> + <the planning task>'")
-```
-
-Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(planner)` path only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach.
+Follow `rules/model-roles.md` for every design, implementation and review step. Feature: Claude designs, Codex implements, Claude reviews. Bug: Codex designs, Claude implements, Codex reviews. Select reviewers from the actual implementer's opposite lineage; human-written PRs use both catalog lineages. Verification uses `Task(subagent_type="verifier")` on Claude in both flows and is an evidence check, not review. If Codex is unavailable (limit, login failure, crash), stop and ask. Tool access outside Codex's sandbox (MCP, browser connectors, etc.) is not unavailability: Claude implements and Codex reviews; announce that routing. Only the step taken over changes hands. Resolve model selection and any explicit override through `rules/model-roles.md`.
 
 Everything below this line is the role definition/prompt handed to whichever backend (Codex or Claude) executes it.
 
@@ -84,7 +80,7 @@ Before reading a template, **check if it exists in the project**. If missing, co
 4. Inform the user that templates were bootstrapped from the global master
 5. Then proceed with the plan writing using the now-available template
 
-**Rationale:** The global master at `~/.claude/templates/plan/` is the source of truth and contains the latest conventions (e.g., the "Visual Requirements" section for UI changes). Projects without templates get the latest version automatically. Existing project templates are **never overwritten** — if the user has customized them, that customization is preserved.
+**Rationale:** The global master at `~/.claude/templates/plan/` is the source of truth and contains the latest conventions (e.g., the "Visual Requirements" section for UI changes). Projects without templates get the latest version automatically. Existing project templates are **never overwritten**; if the user has customized them, that customization is preserved.
 
 ### Frontmatter
 
@@ -110,7 +106,7 @@ When status transitions to `done`, add `completed: YYYY-MM-DD` on the same date.
 
 ### Plan Lifecycle (MANDATORY)
 
-Plans have a fixed lifecycle. Every transition is explicit — no plan stays in `active` forever.
+Plans have a fixed lifecycle. Every transition is explicit; no plan stays in `active` forever.
 
 | Phase | Status | Location | Trigger |
 |-------|--------|----------|---------|

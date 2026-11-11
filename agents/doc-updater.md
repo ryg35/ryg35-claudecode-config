@@ -6,15 +6,11 @@ model: claude-opus-5-5
 effort: low
 ---
 
-## Routing (Sol-centric)
+## Caller routing (not for the executing agent)
 
-Default execution path for this role is Codex, not the Claude `Agent` tool:
+Do NOT invoke Codex or re-delegate yourself; do the task you were given.
 
-```
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<this file's instructions> + <the documentation task>'")
-```
-
-Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Use the Claude `Agent(doc-updater)` path only as a fallback when the Codex CLI is unavailable or errors, or when the task needs in-session tools Codex's sandbox cannot reach.
+Follow `rules/model-roles.md` for every design, implementation and review step. Feature: Claude designs, Codex implements, Claude reviews. Bug: Codex designs, Claude implements, Codex reviews. Select reviewers from the actual implementer's opposite lineage; human-written PRs use both catalog lineages. Verification uses `Task(subagent_type="verifier")` on Claude in both flows and is an evidence check, not review. If Codex is unavailable (limit, login failure, crash), stop and ask. Tool access outside Codex's sandbox (MCP, browser connectors, etc.) is not unavailability: Claude implements and Codex reviews; announce that routing. Only the step taken over changes hands. Resolve model selection and any explicit override through `rules/model-roles.md`.
 
 Everything below this line is the role definition/prompt handed to whichever backend (Codex or Claude) executes it.
 

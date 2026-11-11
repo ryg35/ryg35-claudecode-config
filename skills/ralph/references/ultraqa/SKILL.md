@@ -5,6 +5,9 @@ user_invocable: true
 argument-hint: "[--tests|--build|--lint|--typecheck|--custom <pattern>] [--interactive]"
 ---
 
+Follow `rules/model-roles.md` for every design, implementation and review step. Feature: Claude designs, Codex implements, Claude reviews. Bug: Codex designs, Claude implements, Codex reviews. Select reviewers from the actual implementer's opposite lineage; human-written PRs use both catalog lineages. Verification uses `Task(subagent_type="verifier")` on Claude in both flows and is an evidence check, not review. If Codex is unavailable (limit, login failure, crash), stop and ask. Tool access outside Codex's sandbox (MCP, browser connectors, etc.) is not unavailability: Claude implements and Codex reviews; announce that routing. Only the step taken over changes hands. Resolve model selection and any explicit override through `rules/model-roles.md`.
+
+
 # UltraQA Skill (/ultraqa)
 
 ## Purpose
@@ -55,9 +58,9 @@ Cap at **5 cycles** by default.
 2. **CHECK.** Did the gate pass?
    - Yes → exit success. Report "ULTRAQA COMPLETE: Goal met after N cycles."
    - No → proceed to step 3.
-3. **DIAGNOSE.** Spawn an architect-tier subagent:
+3. **DIAGNOSE.** Feature: use the Claude architect call below. Bug: send the same diagnosis prompt to Codex via `codex-exec-bg.sh`.
    ```
-   Task(subagent_type="general-purpose", model="opus", prompt="
+   Task(subagent_type="general-purpose", prompt="
    DIAGNOSE FAILURE:
    Goal: <goal type and predicate>
    Command: <command run>
@@ -66,16 +69,16 @@ Cap at **5 cycles** by default.
    Provide: (1) root cause hypothesis, (2) specific files/lines to change, (3) the exact fix.
    ")
    ```
-4. **FIX.** Apply the diagnosis:
+4. **FIX.** Feature: apply the diagnosis with Codex via `codex-exec-bg.sh --sandbox workspace-write`. Bug: use the Claude call below.
    ```
-   Task(subagent_type="general-purpose", model="sonnet", prompt="
+   Task(subagent_type="general-purpose", prompt="
    FIX:
    Issue: <architect diagnosis>
    Files: <affected files>
    Apply the fix precisely as recommended. Do not refactor adjacent code. Do not change behavior unrelated to the fix.
    ")
    ```
-5. **REPEAT.** Increment cycle counter and go back to step 1.
+5. **REPEAT.** When changes are ready, review with the actual implementer's opposite lineage (feature Claude, bug Codex). Verification remains Claude in both flows. Increment cycle counter and go back to step 1.
 
 ---
 

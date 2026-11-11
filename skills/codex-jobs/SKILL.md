@@ -54,3 +54,22 @@ A job that is alive but has stopped writing to its `.jsonl` is hung, and `ps` al
 ```bash
 ps -p <pid> >/dev/null && wc -c /tmp/claude-codex-jobs/<job_id>.jsonl
 ```
+
+## 8. Pass `--no-tools` or `--no-search` when the job needs no tools
+
+Every web search re-sends the whole context, so a job that searches by accident burns quota fast. The wrapper consumes these flags and expands them into codex args (measured on codex-cli 0.159.2):
+
+- `--no-search`: `-c web_search=disabled --disable apps --disable browser_use --disable computer_use`. Shell stays. One flag alone is not enough: with only `web_search=disabled` Codex searched through the `codex_apps` MCP, with only `--disable apps` it fell back to native `web_search`.
+- `--no-tools`: `--ignore-user-config` plus every tool feature disabled (shell, apps, code_mode_host, computer_use, plugins, browser_use, multi_agent, web_search). Model and `model_reasoning_effort` are carried over from `~/.codex/config.toml` unless you pass them yourself (any form: `-m X`, `-mX`, `--model[=]X`, `-c|--config[=]model=X`; same for `model_reasoning_effort`). `--no-tools` with `-p/--profile` exits 2: the profile lives in the config file it drops. Flags after `--` are passed through untouched.
+
+Measured input tokens: one call with no tools 24-27k; each web search adds about 50-70k; 2 searches 175,717; the same task under the full block 41,718; a 14-step job with 9 searches 601,377.
+
+`.meta` now records `mode=` and the last turn's `input_tokens=` / `cached_input_tokens=` / `output_tokens=`. The statusline shows `in <N>k` on finished jobs, and the guard hook warns once (`.tokwarn` marker) when a job exceeds `CODEX_TOKEN_WARN` (default 200000), with its web_search / mcp_tool_call / command_execution counts.
+
+## 9. Subagents are off by default; `--allow-subagents` turns them back on
+
+`~/.codex/AGENTS.md` asks Codex to seek independent review, so on implementation jobs it calls `spawn_agent` for a code-reviewer and a typescript-reviewer. Each child forks the parent's full context, and its tokens never reach the parent's `.meta`. Claude reviews Codex output anyway, so that review is duplicated.
+
+The wrapper therefore adds `-c developer_instructions="... Never call spawn_agent ..."` to every job unless the caller passes `--allow-subagents` or its own `developer_instructions`. Config cannot do this on codex-cli 0.159.2: `--disable multi_agent`, `features.multi_agent=false`, and `agents.max_threads=1` all still spawned; `agents.max_threads=0` is rejected.
+
+Measured on one 2,892-line fix-3-bugs-plus-one-feature task (hidden tests 10/10 in every run): with subagents 918k input tokens (parent 557k + two children 361k); with the instruction 332k, 0 children. Auto-compact at 80k never fired (peak context 60k); `tool_output_token_limit=4000` raised calls from 11 to 15 and tokens by 30%, so neither is set.

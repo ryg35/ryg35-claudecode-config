@@ -22,6 +22,8 @@ import subprocess, json, glob, os, re, sys, datetime
 IDLE_MIN = 15          # 最後のイベントからこれだけ経ったら終了扱い
 MATCH_WINDOW = 45      # プロセス起動時刻と記録開始時刻の許容ずれ(秒)
 LOG = os.path.expanduser("~/.claude/logs/session-janitor.log")
+# セッション内で /loop を常駐させる定期タスク。最新の1本だけ残し、前日以前の分は刈る
+RESIDENT_TASKS = {'session-title-refresh'}
 
 # jsonl の中では <scheduled-task name=\"na-sync\"> とエスケープされている。
 # ここを name=" だけで書くと全件を対話セッションと誤判定し、一生掃除しない。
@@ -107,6 +109,12 @@ def main():
         if len(cands) == 1:
             claims.setdefault(cands[0]['file'], []).append(pid)
 
+    newest_resident = {}
+    for p in sorted(procs, key=lambda p: p['start']):
+        cands = match[p['pid']]
+        if len(cands) == 1 and cands[0]['kind'] in RESIDENT_TASKS:
+            newest_resident[cands[0]['kind']] = p['pid']
+
     for p in procs:
         cands = match[p['pid']]
         if len(cands) != 1:                                   # 安全弁2a: 記録が定まらない
@@ -118,6 +126,9 @@ def main():
             continue
         if not s['kind']:                                     # 安全弁3
             kept.append((p, s, '対話セッション'))
+            continue
+        if s['kind'] in RESIDENT_TASKS and p['pid'] == newest_resident.get(s['kind']):
+            kept.append((p, s, '%s 常駐' % s['kind']))
             continue
         idle = (now - s['last']).total_seconds() / 60
         if idle < IDLE_MIN:                                   # 安全弁4

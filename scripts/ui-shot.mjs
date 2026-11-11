@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Usage: node ~/.claude/scripts/ui-shot.mjs --url <url> --out <png> --mark 'text:<regex>::<note>' --mark 'css:<selector>::<note>' [--click <css>]... [--auth user:pass] [--wait <regex>] [--width 1400 --height 900]
+// Usage: node ~/.claude/scripts/ui-shot.mjs --url <url> --out <png> --mark 'text:<regex>::<note>' --mark 'css:<selector>::<note>' [--click <css>]... [--scroll <css>] [--auth user:pass] [--wait <regex>] [--width 1400 --height 900]
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -47,6 +47,10 @@ if (args.wait) await page.waitForFunction((re) => new RegExp(re).test(document.b
 for (const sel of args.click) {
   await page.locator(sel).first().click()
   await page.waitForTimeout(1200)
+}
+if (args.scroll) {
+  await page.locator(args.scroll).first().evaluate((el) => el.scrollIntoView({ block: 'end' }))
+  await page.waitForTimeout(500)
 }
 
 const found = await page.evaluate(({ marks, W, H }) => {

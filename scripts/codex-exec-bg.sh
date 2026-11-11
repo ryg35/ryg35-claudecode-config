@@ -27,11 +27,100 @@ chmod 700 "$JOBS_DIR"
 # Sweep job files older than 24h so a long-uptime machine doesn't accumulate
 # them forever. /tmp/claude-codex-jobs is a fixed location, not one Claude
 # Code cleans up on its own, unlike the session-scoped scratchpad dir.
-find "$JOBS_DIR" -maxdepth 1 -type f \( -name '*.meta' -o -name '*.jsonl' \) -mtime +1 -delete 2>/dev/null || true
+find "$JOBS_DIR" -maxdepth 1 -type f \( -name '*.meta' -o -name '*.jsonl' -o -name '*.stale' -o -name '*.tokwarn' \) -mtime +1 -delete 2>/dev/null || true
 
 job_id=$(date +%Y%m%d-%H%M%S)-$$
 log_file="$JOBS_DIR/${job_id}.jsonl"
 meta_file="$JOBS_DIR/${job_id}.meta"
+
+mode="default"
+pass_args=()
+caller_model=0
+caller_effort=0
+caller_profile=0
+caller_ignore_config=0
+allow_subagents=0
+prev=""
+after_dashdash=0
+for arg in "$@"; do
+  if [ "$after_dashdash" -eq 1 ]; then
+    pass_args+=("$arg")
+    continue
+  fi
+  case "$arg" in
+    --) after_dashdash=1 ;;
+    --no-tools) mode="no-tools"; prev=""; continue ;;
+    --no-search) [ "$mode" = "no-tools" ] || mode="no-search"; prev=""; continue ;;
+    --allow-subagents) allow_subagents=1; prev=""; continue ;;
+    --ignore-user-config) caller_ignore_config=1 ;;
+    -m | --model | -m?* | --model=*) caller_model=1 ;;
+    -p | --profile | -p?* | --profile=*) caller_profile=1 ;;
+  esac
+  case "$prev" in -c | --config) cfg="$arg" ;; *) cfg="" ;; esac
+  case "$arg" in --config=* | -c=*) cfg="${arg#*=}" ;; -c?*) cfg="${arg#-c}" ;; esac
+  case "$cfg" in
+    model=*) caller_model=1 ;;
+    model_reasoning_effort=*) caller_effort=1 ;;
+    profile=*) caller_profile=1 ;;
+    developer_instructions=*) allow_subagents=1 ;;
+  esac
+  pass_args+=("$arg")
+  prev="$arg"
+done
+
+config_value() {
+  local file="${CODEX_HOME:-$HOME/.codex}/config.toml"
+  [ -f "$file" ] || return 0
+  # Top-level keys only: the same key inside a [table] belongs to a profile or provider.
+  awk -v key="$1" '
+    /^[[:space:]]*\[/ { exit }
+    $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
+      sub(/^[^=]*=[[:space:]]*/, "")
+      if (match($0, /^"[^"]*"/) || match($0, /^\047[^\047]*\047/)) {
+        print substr($0, 2, RLENGTH - 2)
+        exit
+      }
+    }
+  ' "$file" 2>/dev/null || true
+}
+
+if [ "$caller_model" -eq 0 ]; then
+  cfg_model=$(config_value model)
+  if [ -z "$cfg_model" ] && [ "$caller_profile" -eq 0 ]; then
+    echo "codex-exec-bg.sh: no configured model; configure one or pass --model explicitly." >&2
+    exit 2
+  fi
+fi
+
+# Measured on codex-cli 0.159.2: blocking one route makes Codex fall back to
+# another (web_search=disabled -> codex_apps MCP search, --disable apps -> native
+# web_search), so each mode disables every route it covers.
+mode_args=()
+case "$mode" in
+  no-search)
+    mode_args=(-c web_search=disabled --disable apps --disable browser_use --disable computer_use)
+    ;;
+  no-tools)
+    # --ignore-user-config drops config.toml, so carry its model and effort over.
+    if [ "$caller_ignore_config" -eq 0 ]; then
+      mode_args+=(--ignore-user-config)
+    fi
+    if [ "$caller_model" -eq 0 ]; then
+      mode_args+=(-m "$cfg_model")
+    fi
+    if [ "$caller_effort" -eq 0 ]; then
+      cfg_effort=$(config_value model_reasoning_effort)
+      if [ -n "$cfg_effort" ]; then
+        mode_args+=(-c "model_reasoning_effort=$cfg_effort")
+      fi
+    fi
+    mode_args+=(-c web_search=disabled --disable shell_tool --disable apps --disable code_mode_host --disable computer_use --disable plugins --disable browser_use --disable multi_agent)
+    ;;
+esac
+# Config cannot remove spawn_agent on codex-cli 0.159.2 (see codex-jobs SKILL.md §9); an instruction can.
+if [ "$allow_subagents" -eq 0 ]; then
+  mode_args+=(-c 'developer_instructions="This is a non-interactive codex exec job. Never call spawn_agent or start subagents, including reviewers; the caller reviews your work separately."')
+fi
 
 # Best-effort one-line label for the statusline: first arg that isn't a flag
 # or a flag's value. Flags that take a value (-C, -c, -m, -s, -p, -i, -o,
@@ -39,7 +128,7 @@ meta_file="$JOBS_DIR/${job_id}.meta"
 # otherwise e.g. `-C /some/dir` mislabels the job as the directory path.
 label=""
 skip_next=0
-for arg in "$@"; do
+for arg in "${pass_args[@]+"${pass_args[@]}"}"; do
   if [ "$skip_next" -eq 1 ]; then
     skip_next=0
     continue
@@ -66,11 +155,21 @@ write_meta() {
     printf 'label=%s\n' "$label_short"
     printf 'start_ts=%s\n' "$start_ts"
     printf 'pid=%s\n' "$pid"
+    printf 'mode=%s\n' "$mode"
     if [ -n "$end_ts" ]; then
       printf 'end_ts=%s\n' "$end_ts"
     fi
+    if [ -n "${usage_lines:-}" ]; then
+      printf '%s\n' "$usage_lines"
+    fi
   } > "$meta_file"
 }
+
+if [ "$mode" = "no-tools" ] && [ "$caller_profile" -eq 1 ]; then
+  write_meta "error" "$$" "$(date +%s)"
+  echo "codex-exec-bg.sh: --no-tools cannot be combined with -p/--profile (--ignore-user-config drops config.toml, so the profile would not exist). Pass -m and -c instead." >&2
+  exit 2
+fi
 
 write_meta "running" "$$"
 printf 'codex-job-id=%s meta=%s\n' "$job_id" "$meta_file" >&2
@@ -96,15 +195,32 @@ printf 'codex-job-id=%s meta=%s\n' "$job_id" "$meta_file" >&2
 # sits queued until codex exits, and the handler never gets to run before the
 # kill. Start codex in the background and `wait` on it: `wait` IS interruptible
 # by a trap, which is the whole point of this shape.
-trap 'kill "$codex_pid" 2>/dev/null; write_meta "killed" "$$" "$(date +%s)"; exit 143' TERM INT HUP
+trap 'kill "${codex_pid:-}" 2>/dev/null; write_meta "killed" "$$" "$(date +%s)"; exit 143' TERM INT HUP
 set +e
-codex exec --json "$@" > "$log_file" 2>&1 < /dev/null &
+codex exec --json "${mode_args[@]+"${mode_args[@]}"}" "${pass_args[@]+"${pass_args[@]}"}" > "$log_file" 2>&1 < /dev/null &
 codex_pid=$!
 wait "$codex_pid"
 exit_code=$?
 set -e
 
 end_ts=$(date +%s)
+usage_lines=""
+if [ -f "$log_file" ]; then
+  last_turn=$(LC_ALL=C grep '"type":"turn.completed"' "$log_file" 2>/dev/null | tail -1 || true)
+  if [ -n "$last_turn" ]; then
+    if command -v jq >/dev/null 2>&1; then
+      usage_lines=$(printf '%s' "$last_turn" | jq -r '.usage // {} | to_entries[] | select(.key == "input_tokens" or .key == "cached_input_tokens" or .key == "output_tokens") | select(.value | type == "number") | "\(.key)=\(.value)"' 2>/dev/null || true)
+    else
+      usage_lines=$(printf '%s' "$last_turn" | python3 -I -c '
+import json, sys
+u = json.load(sys.stdin).get("usage") or {}
+for k in ("input_tokens", "cached_input_tokens", "output_tokens"):
+    if isinstance(u.get(k), int):
+        print(f"{k}={u[k]}")
+' 2>/dev/null || true)
+    fi
+  fi
+fi
 if [ "$exit_code" -eq 0 ]; then
   write_meta "done" "$$" "$end_ts"
 else
@@ -133,8 +249,8 @@ usage_file="$usage_dir/$(date +%Y-%m-%d).jsonl"
 # 最後の turn.completed の usage を取る (セッション累積ではなくターン単位なので合算する)
 if [ -f "$log_file" ]; then
   # pipefail + set -e: a no-match grep would exit 1 here and mask codex's own exit code.
-  thread_id=$(grep -o '"thread_id":"[^"]*"' "$log_file" 2>/dev/null | head -1 | cut -d'"' -f4 || true)
-  usage_json=$(grep -o '"usage":{[^}]*}' "$log_file" 2>/dev/null | tail -1 | sed 's/^"usage"://' || true)
+  thread_id=$(LC_ALL=C grep -o '"thread_id":"[^"]*"' "$log_file" 2>/dev/null | head -1 | cut -d'"' -f4 || true)
+  usage_json=$(LC_ALL=C grep -o '"usage":{[^}]*}' "$log_file" 2>/dev/null | tail -1 | sed 's/^"usage"://' || true)
   if [ -n "$usage_json" ]; then
     # thread_id が空のジョブ (起動即エラー) も記録しておく。消費0でも
     # 「呼んだが失敗した」事実が残るほうが、後から数を突き合わせやすい。
