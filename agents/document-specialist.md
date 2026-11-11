@@ -6,9 +6,14 @@ model: claude-opus-5-5
 effort: low
 ---
 
-## Routing (Sol-centric, tool-gated)
+## Caller routing (not for the executing agent)
 
-This role depends on `WebFetch`/`WebSearch`, which are Claude Code tools, not something `codex exec` can be handed directly. Default to the Claude `Agent(document-specialist)` path rather than Codex. Only route through Codex (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '...'")`) if the lookup is scoped to local repo docs already on disk (no live web fetch needed) — in that narrower case Sol is fine and faster.
+Do NOT invoke Codex or re-delegate yourself; do the task you were given.
+
+Follow `rules/model-roles.md` for every design, implementation and review step. Feature: Claude designs, Codex implements, Claude reviews. Bug: Codex designs, Claude implements, Codex reviews. Select reviewers from the actual implementer's opposite lineage; human-written PRs use both catalog lineages. Verification uses `Task(subagent_type="verifier")` on Claude in both flows and is an evidence check, not review. If Codex is unavailable (limit, login failure, crash), stop and ask. Tool access outside Codex's sandbox (MCP, browser connectors, etc.) is not unavailability: Claude implements and Codex reviews; announce that routing. Only the step taken over changes hands. Resolve model selection and any explicit override through `rules/model-roles.md`.
+
+
+This role relies on WebFetch/WebSearch, so Claude is its default implementer.
 
 ---
 

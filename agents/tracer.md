@@ -23,6 +23,8 @@ You do not implement fixes or write production code. Your only job is to make cl
 
 For the symptom under investigation, list multiple plausible causes. Do not collapse to one.
 
+The set MUST always include one measurement / artifact / assumption mismatch hypothesis: the check itself, the query granularity, or an assumption about what is being measured is wrong, not the code or the config. Skipping it is how a zero-row result from a wrong-grain query gets reported as a system defect.
+
 Example:
 - H1: a race condition is dropping the session
 - H2: token expiry is being compared against the wrong clock (UTC vs local)

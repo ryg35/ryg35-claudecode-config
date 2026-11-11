@@ -1,7 +1,7 @@
 ---
 name: object-canvas
-description: 1 つの model.json から「画面 / 概念図 / ER 図」を同じキャンバスに描き、メニュー 1 つで切り替える単一 HTML を生成するスキル。3 つを別々のツールで描くと、片方だけ古くなって嘘の図が残る。元データが 1 つなら、直した側にもう片方が必ず追従する。「画面と概念図と ER 図を 1 枚で見たい」「オブジェクトの紐づきを見たい」「モデル図と画面を同じ元データから描きたい」「OOUI のオブジェクト図がほしい」「この画面はどのテーブルを触るのか知りたい」と言われたとき、既存コード（migration・型定義・routes）からモデル図を起こすとき、または /object-canvas で使う。1 枚絵は diagram-studio、スライド一式は slide-deck-studio が担当。
-user_invocable: true
+description: "1 つの model.json から「画面 / 概念図 / ER 図」を同じキャンバスに描き、extract-sql / extract-db / render / validate で更新する単一 HTML を作る。発火条件: 「画面と概念図と ER 図を 1 枚で見たい」「機能を変えたので画面・概念図・ER 図も更新して」「ER 図が実装に追従していない」「この画面はどのテーブルを触るのか知りたい」、既存コード（migration・型定義・routes）からモデル図を起こすとき、/object-canvas。3 つを別々のツールで描くと、片方だけ古くなって嘘の図が残る。1 枚絵は diagram-studio、スライド一式は slide-deck-studio が担当。"
+user-invocable: true
 ---
 
 # object-canvas（1 つの元データから、画面と概念図と ER 図）

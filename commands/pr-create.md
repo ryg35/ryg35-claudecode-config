@@ -2,6 +2,9 @@
 description: Create a GitHub Pull Request with auto-generated summary from commit history.
 ---
 
+Follow `rules/model-roles.md` for every design, implementation and review step. Feature: Claude designs, Codex implements, Claude reviews. Bug: Codex designs, Claude implements, Codex reviews. Select reviewers from the actual implementer's opposite lineage; human-written PRs use both catalog lineages. Verification uses `Task(subagent_type="verifier")` on Claude in both flows and is an evidence check, not review. If Codex is unavailable (limit, login failure, crash), stop and ask. Tool access outside Codex's sandbox (MCP, browser connectors, etc.) is not unavailability: Claude implements and Codex reviews; announce that routing. Only the step taken over changes hands. Resolve model selection and any explicit override through `rules/model-roles.md`.
+
+
 # PR Create
 
 Create a GitHub Pull Request with comprehensive summary.
@@ -37,10 +40,7 @@ git diff origin/main...HEAD --stat
 
 3.5. **Model routing suggestion**
 
-Suggest the optimal model for review based on PR size:
-- Large PR (50+ files) → Opus review recommended
-- Medium PR (10-50 files) → Sonnet review recommended
-- Small PR (1-10 files) → Haiku is sufficient
+Use the feature/bug flow above and the actual implementer to choose the opposite reviewer lineage. Use the existing review catalog, not PR size, to choose scopes.
 
 4. **Generate PR title**
 

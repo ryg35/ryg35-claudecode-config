@@ -20,7 +20,9 @@
       "Bash(node --version:*)",
       "Bash(codex exec:*)",
       "Bash(node /Users/*/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs:*)",
+      "Bash(node /home/*/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs:*)",
       "Bash(node /Users/*/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs:*)",
+      "Bash(node /home/*/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs:*)",
       "Bash(node \"${CLAUDE_PLUGIN_ROOT}/scripts/codex-companion.mjs\":*)",
       "Bash(node ${CLAUDE_PLUGIN_ROOT}/scripts/codex-companion.mjs:*)",
       "Bash(npm --version)",
@@ -405,20 +407,16 @@
           {
             "type": "command",
             "command": "~/.claude/scripts/pre-tool-enforcer-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/scripts/client-project-A-release-guard.sh",
+            "timeout": 30
           }
         ]
       }
     ],
     "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/notify.sh"
-          }
-        ]
-      },
       {
         "matcher": "",
         "hooks": [
@@ -454,6 +452,15 @@
             "command": "~/.claude/hooks/japanese-guard.py"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/command-guard.py"
+          }
+        ]
       }
     ],
     "PreCompact": [
@@ -478,17 +485,6 @@
         ]
       }
     ],
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/notify.sh"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Bash",
@@ -504,15 +500,6 @@
         ]
       },
       {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/scripts/show-diff-pane.sh"
-          }
-        ]
-      },
-      {
         "matcher": "Write",
         "hooks": [
           {
@@ -523,15 +510,6 @@
       }
     ],
     "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/scripts/open-yazi-pane.sh"
-          }
-        ]
-      },
       {
         "matcher": "startup|clear",
         "hooks": [
@@ -584,9 +562,35 @@
   "promptSuggestionEnabled": false,
   "skipWorkflowUsageWarning": true,
   "theme": "dark",
-  "preferredNotifChannel": "ghostty",
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "syncClaudeAiPlugins": false
+  "syncClaudeAiPlugins": false,
+  "skillListingBudgetFraction": 0.02,
+  "skillOverrides": {
+    "build-fix": "name-only",
+    "changelog": "name-only",
+    "commit-push": "name-only",
+    "conflict-check": "name-only",
+    "dependency-check": "name-only",
+    "e2e": "name-only",
+    "fetch-pull": "name-only",
+    "harness-audit": "name-only",
+    "pr-create": "name-only",
+    "pre-pr-review": "name-only",
+    "project-init": "name-only",
+    "review-prs": "name-only",
+    "smoke-test": "name-only",
+    "ss": "name-only",
+    "ss-list": "name-only",
+    "tdd": "name-only",
+    "update-docs": "name-only",
+    "vibe": "name-only",
+    "k2": "name-only",
+    "basin": "name-only",
+    "sandbox-stable": "name-only",
+    "sandbox-next": "name-only",
+    "sandbox-migrate-to-next": "name-only",
+    "cloudflare-email-service": "name-only"
+  }
 }

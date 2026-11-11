@@ -74,6 +74,17 @@ cd <repo> && git push origin <branch>
 burn 2026-08-31: f1-weather PR #62 で `git push` を実行しようとして拒否された。
 burn 2026-09-05 (2回目、規則に昇格): PR #66 で素の `git push` を渡し「明示的に」と指摘された。
 
+**`main` / `master` / `develop` など既定ブランチへの push コマンドは渡さない。例外なし。** `~/.claude` の設定リポジトリも、
+1行の chore も同じ。渡すのは作業ブランチの push だけで、既定ブランチへは必ず PR を通す。
+
+1. コミットする前に `git branch --show-current` を見る。既定ブランチか、マージ済みのブランチ
+   (`git branch -r --merged origin/main` に出る) なら、`git switch -c <type>/<slug> origin/main` で切ってからコミットする。
+2. push コマンドを書く前に、`<branch>` が既定ブランチでないことを確かめる。既定ブランチなら書かずに 1. に戻る。
+3. push を渡したら、同じターンで PR を作る段取り（push 後に `gh pr create`）まで示す。
+
+burn 2026-10-29: `~/.claude` でマージ済みの feat/model-roles の上にコミットし、確かめないまま
+`git push origin main` を渡した。「main push やめれ。PRつくるべ」と指摘された。
+
 ## Branch names: `release/<x>` fails when a `release` branch exists
 
 Git stores branches as files under `refs/heads/`, so `release` and `release/<name>` cannot
@@ -96,6 +107,17 @@ burn 2026-09-20: client-project-A の release で `release/campaign-kpi-...` が
 され、`release-campaign-kpi-2026-09-20` に逃げた。ff-only を探さなかっただけで、PR を 1 本
 作り直しになった。
 
+**The fixed branch is checked out in another worktree: advance it there, never rename.**
+`git switch web-release` fails with `already used by worktree at <path>`. Run the ff inside
+that worktree instead: `git -C <path> merge --ff-only origin/main`, then cherry-pick there.
+A dated or suffixed copy (`web-release-2026-11-02`) is the same escape as above. No exceptions.
+A delegation prompt never offers a fallback branch name; it says "stop and report" instead.
+
+burn 2026-11-02 (2nd time, client-project-A): a subagent brief allowed `web-release-2026-11-02` as a
+fallback and the release PR (#485) went out from it; the release had to be re-opened from
+`web-release` as #486. The repo's release-flow-guard would have blocked it but only loads in
+sessions opened in the repo; `~/.claude/scripts/client-project-A-release-guard.sh` now runs it everywhere.
+
 ## Pull Request Workflow
 
 Use `git diff [base-branch]...HEAD`, the full history, not just the latest commit.
@@ -103,3 +125,18 @@ Use `git diff [base-branch]...HEAD`, the full history, not just the latest commi
 **ALWAYS surface the full PR URL as a clickable link in the final message**, on every
 PR creation, PR-branch push, and conflict resolution. "Linked it earlier" does not count.
 Burn: 2026-08-12, user had to ask "URLくれ" before merging PR #31.
+
+## Merge state: check it yourself, never wait to be told
+
+**Whenever a PR is waiting on merge (handoff `マージ待ち`, a PR you opened this session, or a
+post-merge runbook step is next), run `gh pr view <url> --json state,mergedAt` BEFORE replying
+to the user's next message.** No exceptions, whatever that message says ("次", "続き", anything).
+
+- `MERGED`: say so in one line with `mergedAt`, then present the first post-merge step (show its
+  content and wait for approval as the prod-SQL/CLI rule requires; checking merge state does not
+  authorize running anything).
+- `OPEN`: one line ("#337 はまだ未マージ"), then continue with other work.
+- Never ask "マージしましたか?". The app's PR monitor does not fire on merge, so the user is the
+  only other source, and making them report it is the failure this rule exists to stop.
+
+Burn 2026-10-01: 「PRをmergedしたときに毎回いうの面倒」.

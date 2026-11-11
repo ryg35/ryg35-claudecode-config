@@ -49,7 +49,7 @@ SOFTWARE.
 - 著作権表示: Copyright (c) 2025 Yeachan Heo
 - 変更: 改変あり (Claude Code 標準の道具だけで動くよう書き換え、ルーティング節などを追加)
 - 対象ファイル:
-  - `agents/analyst.md`
+  - `skills/spec-driven/SKILL.md` (Step 2 の要件の穴5観点。削除した `agents/analyst.md` から移した部分)
   - `agents/critic.md`
   - `agents/designer.md`
   - `agents/document-specialist.md`
@@ -57,13 +57,12 @@ SOFTWARE.
   - `agents/scientist.md`
   - `agents/verifier.md`
   - `skills/ai-slop-cleaner/SKILL.md`
-  - `skills/deep-dive/SKILL.md`
-  - `skills/deepinit/SKILL.md`
+  - `agents/tracer.md` (計測・前提の取り違え仮説。削除した `skills/deep-dive` から移した部分)
+  - `commands/update-docs.md` (ディレクトリごとの AGENTS.md 雛形。削除した `skills/deepinit` から移した部分)
   - `skills/plan/SKILL.md`
   - `skills/plan/references/deep-interview/SKILL.md`
   - `skills/ralph/SKILL.md`
   - `skills/ralph/references/ultrawork/SKILL.md`
-  - `skills/team/SKILL.md`
 
 ```text
 MIT License
@@ -109,7 +108,7 @@ SOFTWARE.
   - `agents/silent-failure-hunter.md`
   - `agents/tdd-guide.md`
   - `agents/typescript-reviewer.md`
-  - `skills/agent-introspection-debugging/SKILL.md`
+  - `rules/agents.md` (Guidelines の停止時の回復手順。削除した `skills/agent-introspection-debugging` から移した部分)
   - `skills/config-gc/SKILL.md`
   - `skills/deep-research/SKILL.md`
   - `skills/eval-harness/SKILL.md`

@@ -61,4 +61,24 @@ for m in "$JOBS_DIR"/*.meta; do
   echo "run_in_background: true を付け忘れると、ハーネスの2分タイムアウトでこうなります。"
 done
 
+# --- 3. 入力トークンが閾値を超えた完了ジョブを1回だけ警告する -------------
+# web 検索1回で入力が 50-70k 増えるので、原因が見えるようツール呼び出しの内訳も出す
+TOKEN_WARN=${CODEX_TOKEN_WARN:-200000}
+case "$TOKEN_WARN" in '' | *[!0-9]*) TOKEN_WARN=200000 ;; esac
+count_items() { LC_ALL=C grep -c "\"type\":\"item.completed\".*\"item\":{\"id\":\"[^\"]*\",\"type\":\"$1\"" "$2" 2>/dev/null || true; }
+for m in "$JOBS_DIR"/*.meta; do
+  [ -e "$m" ] || continue
+  [ -e "${m%.meta}.tokwarn" ] && continue
+  case "$(meta_field "$m" status)" in done | error) ;; *) continue ;; esac
+  tok=$(meta_field "$m" input_tokens)
+  case "$tok" in '' | *[!0-9]*) continue ;; esac
+  [ "$tok" -gt "$TOKEN_WARN" ] || continue
+
+  : > "${m%.meta}.tokwarn"
+  j="${m%.meta}.jsonl"
+  echo "codex ジョブ $(basename "${m%.meta}") ($(meta_field "$m" label)) の入力トークンが ${tok} で、閾値 ${TOKEN_WARN} を超えました。"
+  echo "内訳: web_search=$(count_items web_search "$j") mcp_tool_call=$(count_items mcp_tool_call "$j") command_execution=$(count_items command_execution "$j") (mode=$(meta_field "$m" mode))"
+  echo "ツールが不要なジョブは codex-exec-bg.sh に --no-tools か --no-search を付けてください。"
+done
+
 exit 0

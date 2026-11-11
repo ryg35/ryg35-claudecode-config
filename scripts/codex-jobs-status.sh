@@ -9,7 +9,7 @@
 
 set -uo pipefail
 
-JOBS_DIR="/tmp/claude-codex-jobs"
+JOBS_DIR="${CODEX_JOBS_DIR:-/tmp/claude-codex-jobs}"
 MAX_SHOWN=3
 JOB_TTL=$((6 * 3600)) # 6h; matches the 5h usage window shown elsewhere
 
@@ -35,6 +35,18 @@ tool_label() {
     "") printf '' ;;
     *) printf '%s' "$1" ;;
   esac
+}
+
+format_tokens() {
+  local n=$1
+  if (( n >= 999500 )); then
+    local tenths=$(( (n + 50000) / 100000 ))
+    printf '%d.%dM' $(( tenths / 10 )) $(( tenths % 10 ))
+  elif (( n >= 1000 )); then
+    printf '%dk' $(( (n + 500) / 1000 ))
+  else
+    printf '%d' "$n"
+  fi
 }
 
 format_elapsed() {
@@ -74,6 +86,11 @@ for entry in "${sorted[@]}"; do
   start_ts=$(grep -m1 '^start_ts=' "$meta" | cut -d= -f2-)
   end_ts=$(grep -m1 '^end_ts=' "$meta" | cut -d= -f2-)
   pid=$(grep -m1 '^pid=' "$meta" | cut -d= -f2-)
+  input_tokens=$(LC_ALL=C grep -m1 '^input_tokens=' "$meta" | cut -d= -f2-)
+  tok_str=""
+  if [[ "$input_tokens" =~ ^[0-9]+$ ]]; then
+    tok_str=" in $(format_tokens "$input_tokens")"
+  fi
 
   # A meta file can be left at status=running if the wrapper's own process
   # was killed before it could write "done"/"error" (e.g. shell closed,
@@ -118,11 +135,11 @@ for entry in "${sorted[@]}"; do
       ;;
     done)
       color="$GREEN"
-      seg="codex ${elapsed_str}✓done"
+      seg="codex ${elapsed_str}✓done${tok_str}"
       ;;
     error)
       color="$RED"
-      seg="codex ${elapsed_str}✗error"
+      seg="codex ${elapsed_str}✗error${tok_str}"
       ;;
     stale)
       color="$RED"

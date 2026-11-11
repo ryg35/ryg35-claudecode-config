@@ -4,10 +4,12 @@ description: "Planning skill with three modes: direct (single-pass plan), consen
 user_invocable: true
 argument-hint: "[--direct|--consensus|--review] [--interactive] [--deliberate] <task description>"
 ---
-> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/`、omc-teams / sciomc は `skills/team/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
+> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
 
 
 # Plan Skill (/plan)
+
+Read `rules/model-roles.md` first. Feature consensus: Planner and Architect are Claude, Critic is Codex. Bug consensus: Planner and Architect are Codex, Critic is Claude. Keep Critic independent of the actual plan author lineage. Resolve models and overrides there.
 
 ## Purpose
 
@@ -62,7 +64,7 @@ If the user only said "plan this", default to the `/plan` command, which is the 
 
 ## Direct mode
 
-1. **Quick analysis.** `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol ...")` for a brief requirements review when the request touches multiple subsystems. Fall back to `Task(general-purpose, model=opus)` if the Codex CLI is unavailable.
+1. **Quick analysis.** Use Claude for feature design and Codex via `~/.claude/scripts/codex-exec-bg.sh` for bug design when the request touches multiple subsystems. Fall back to `Task(general-purpose)` if the user explicitly approves a role swap after Codex is unavailable.
 2. **Create plan.** Use the `/plan` command's template structure (`docs/plan/<verb-topic>.md` with `_template-feature.md` / `_template-fix.md` / `_template-investigate.md`). See `~/.claude/templates/plan/` for masters.
 3. **Frontmatter:** `status: backlog` + `branch: <derived>`. Follow `~/.claude/skills/directory-conventions/SKILL.md`.
 4. Stop. Mark `pending approval`. Do not auto-execute.
@@ -84,7 +86,7 @@ If the user only said "plan this", default to the `/plan` command, which is the 
    - If only one viable option remains, an explicit **invalidation rationale** for the rejected alternatives.
    - In `--deliberate`: a **pre-mortem** (3 failure scenarios) and an **expanded test plan** (unit / integration / e2e / observability).
 
-   Delegate: `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '<planner prompt + RALPLAN-DR requirements>'")`. Sol is the default; Astra runs only when the user names it, because it burns the ChatGPT weekly limit several times faster. Fall back to `Task(general-purpose, model=opus, ...)` if the Codex CLI is unavailable.
+   Delegate by flow: feature uses `Task(subagent_type="planner", prompt=<planner prompt + RALPLAN-DR requirements>)`; bug uses `Bash("~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- '<planner prompt + RALPLAN-DR requirements + plan output path>'")`. Fall back to `Task(general-purpose, ...)` if the user explicitly approves a role swap after Codex is unavailable.
 
 2. **User feedback** *(only with `--interactive`)*: Present the draft plan plus the Principles / Drivers / Options summary via `AskUserQuestion`. Options:
    - Proceed to review.
@@ -93,12 +95,12 @@ If the user only said "plan this", default to the `/plan` command, which is the 
 
    Without `--interactive`, skip this step and proceed automatically.
 
-3. **Architect review.** `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '<architect prompt>'")`. Fall back to `Task(general-purpose, model=opus, ...)` if the Codex CLI is unavailable.
+3. **Architect review.** Feature uses `Task(subagent_type="architect", prompt=<architect prompt>)`; bug uses `Bash("~/.claude/scripts/codex-exec-bg.sh -- '<architect prompt>'")`. Fall back to `Task(general-purpose, ...)` if the user explicitly approves a role swap after Codex is unavailable.
    - Must include: the strongest steelman antithesis against the favored option, at least one real tradeoff tension, a synthesis path when possible.
    - In `--deliberate`, must explicitly flag principle violations.
    - **Wait for this to complete before step 4.** Do not parallelize steps 3 and 4.
 
-4. **Critic review.** `Task(critic, model=opus, prompt=<critic prompt>)`. **Always Claude Opus, never Sol**, even though Planner/Architect default to Sol: the Critic is the independent check on work Sol just produced, and same-model (or same-vendor-lineage) self-review under-catches the errors that model's own blind spots produce. Keeping Critic on a different model lineage than Planner/Architect is the point, not an inconsistency.
+4. **Critic review.** Feature uses Codex via `~/.claude/scripts/codex-exec-bg.sh`; bug uses `Task(subagent_type="critic", prompt=<critic prompt>)`. The opposite lineage catches blind spots shared by Planner and Architect. If authorship changes, select Critic from the actual authors' opposite lineage. Stop if author and Critic would share a lineage. The single exception is when Codex is unavailable AND the user explicitly approved Claude taking the review step: use a separate Claude context that did not implement, and disclose it in the PR body.
    - Must verify: principle-option consistency, fair alternative exploration, risk mitigation clarity, testable acceptance criteria, concrete verification steps.
    - Must reject shallow alternatives, driver contradictions, vague risks, or weak verification.
    - In `--deliberate`, must reject missing or weak pre-mortem and missing or weak expanded test plan.
@@ -113,11 +115,10 @@ If the user only said "plan this", default to the `/plan` command, which is the 
 
 6. **Apply improvements.** Merge accepted suggestions into the plan file. Add an **ADR** section: Decision / Drivers / Alternatives considered / Why chosen / Consequences / Follow-ups. Write a brief changelog at the end recording what was applied.
 
-6.5. **Codex convergence (only with `--with-codex`).** Read `references/codex-converge/SKILL.md` and follow it against the plan file in `--auto` mode (Claude consensus has already gated approval at step 4 Critic APPROVE; per-round user gates would duplicate that). Forward `--codex-max-rounds N` if supplied. Termination: P1 = 0 for two consecutive rounds, or max-rounds, or STUCK escalation. On STUCK / MAX-ROUNDS, surface the convergence table before continuing to step 7. Without `--with-codex`, skip this step entirely.
+6.5. **Codex convergence (only with `--with-codex`).** Read `references/codex-converge/SKILL.md` and follow it against the plan file in `--auto` mode (flow-routed consensus has already gated approval at step 4 Critic APPROVE; per-round user gates would duplicate that). Forward `--codex-max-rounds N` if supplied. Termination: P1 = 0 for two consecutive rounds, or max-rounds, or STUCK escalation. On STUCK / MAX-ROUNDS, surface the convergence table before continuing to step 7. Without `--with-codex`, skip this step entirely.
 
 7. **Approval gate.** Mark `pending approval`.
    - With `--interactive`, present options via `AskUserQuestion`:
-     - Approve and hand off to `team` for parallel execution (recommended for large tasks).
      - Approve and hand off to `ralph` for sequential execution with verification.
      - Approve, but compact context first (recommended when context is heavily used).
      - Request changes.
@@ -125,26 +126,19 @@ If the user only said "plan this", default to the `/plan` command, which is the 
    - Without `--interactive`, output the final plan marked `pending approval` and stop.
 
 8. **On approval** *(only with `--interactive`)*:
-   - "Approve via team" → invoke `Skill("team")` with the plan path as context.
    - "Approve via ralph" → invoke `Skill("ralph")` with the plan path as context.
    - "Approve after compact" → invoke `Skill("strategic-compact")` first, then `Skill("ralph")`.
    - Never implement directly inside the planner.
 
 ### Provider overrides
 
-Codex (`gpt-6.1-sol`) is the **default** for Planner and Architect (see steps 1 and 3). Critic stays on Claude Opus by default (see step 4 rationale).
-
-- `--architect claude` → force the Architect pass back to `Task(general-purpose, model=opus, prompt=<architect prompt>)` instead of Codex.
-- `--critic codex` → opt the Critic pass into Codex too (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol -- '<critic prompt>'")`), sacrificing model-lineage independence for speed. Only use this when the plan is low-risk and a fast turnaround matters more than an independent check.
-- `--planner claude` → force the Planner pass back to Claude Opus.
-
-If the Codex CLI is missing or errors, note the fallback and continue with the Claude default for that pass.
+Accept `--planner claude|codex`, `--architect claude|codex` and `--critic claude|codex` (for example, `--planner claude --architect claude --critic codex`). Each flag overrides the flow default for that pass only. Apply it when dispatching the corresponding step, using its Claude role agent or the Codex wrapper. Provider overrides must preserve Critic independence from the actual plan authors; the same-lineage rule and its single approved Codex-unavailability exception still apply. Defaults follow the feature/bug table above. If Codex is unavailable, stop and ask. Tool-access limits are not unavailability: announce Claude authorship and use Codex as Critic. Only the step taken over changes hands. See `rules/model-roles.md`.
 
 ### Codex convergence (`--with-codex`)
 
 After step 6 (Apply improvements + ADR), opt-in to an independent Codex review loop:
 
-- Trigger: `--with-codex` flag explicitly. Off by default; Claude consensus alone is enough for most plans.
+- Trigger: `--with-codex` flag explicitly. Off by default; flow-routed consensus alone is enough for most plans.
 - Mechanism: Read `references/codex-converge/SKILL.md` and follow it runs Codex 3 ways (standard + adversarial + spec-diff) in parallel against the plan file, reflects findings, repeats. Terminates on P1 = 0 for two consecutive rounds.
 - Pass-through: `--codex-max-rounds N` (default 15), `--severity P0|P1|P2` (default P1).
 - When to use: load-bearing decisions (auth/security, schema migration, public API, destructive change), or when you want an external-reviewer signal before commit.
@@ -154,7 +148,7 @@ After step 6 (Apply improvements + ADR), opt-in to an independent Codex review l
 ## Review mode (`--review`)
 
 1. Read the plan file (`docs/plan/<name>.md` or path supplied in args).
-2. Run a single Critic pass: `Task(general-purpose, model=opus, prompt=<critic-of-existing-plan prompt>)`.
+2. Run a single Critic pass: `Task(general-purpose, prompt=<critic-of-existing-plan prompt>)`.
 3. Return verdict: **APPROVED**, **REVISE** (with specific feedback), or **REJECT** (replanning required).
 4. Do not modify the plan automatically. Hand verdict back to the user.
 
@@ -188,9 +182,9 @@ Save plans to `docs/plan/<verb-topic>.md` (kebab-case) per `~/.claude/skills/dir
 
 - `AskUserQuestion` for preference questions (scope, priority, timeline, risk tolerance) when `--interactive` is set.
 - Plain text only for questions that need a specific value (port number, file name, free-form clarification).
-- `Task(general-purpose, model=haiku)` to explore the codebase before asking the user about it. Answer your own codebase questions first.
-- `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol ...")` for planner and architect passes (default). `Task(critic, model=opus)` for the critic pass (default, kept independent of Sol).
-- `Task(general-purpose, model=opus)` as the fallback for planner/architect if Codex CLI is unavailable, or when `--architect claude` / `--planner claude` is passed.
+- `Task(general-purpose)` to explore the codebase before asking the user about it. Answer your own codebase questions first.
+- Feature: Claude Planner/Architect and Codex Critic. Bug: Codex Planner/Architect and Claude Critic, per `rules/model-roles.md`.
+- Stop and ask when Codex is unavailable; any changed authorship requires the opposite Critic lineage.
 - **Consensus mode agent calls are sequential.** Always wait for the Architect result before issuing the Critic call.
 - Never invoke an execution skill before explicit approval is captured.
 
@@ -201,7 +195,7 @@ Save plans to `docs/plan/<verb-topic>.md` (kebab-case) per `~/.claude/skills/dir
 - Stop interviewing once requirements are clear enough to plan. Do not over-interview.
 - Consensus mode stops after 5 iterations without APPROVE. Present the best version with a note.
 - Without `--interactive`, consensus mode outputs the final plan marked `pending approval` and stops.
-- If the user says "just do it" or "skip planning" without naming an execution path, output the current plan as `pending approval` and ask for explicit execution approval via `AskUserQuestion`. Do not auto-invoke `ralph` / `team`.
+- If the user says "just do it" or "skip planning" without naming an execution path, output the current plan as `pending approval` and ask for explicit execution approval via `AskUserQuestion`. Do not auto-invoke `ralph`.
 - Escalate to the user when there are irreconcilable trade-offs that require a business decision.
 
 ---
@@ -226,7 +220,7 @@ Save plans to `docs/plan/<verb-topic>.md` (kebab-case) per `~/.claude/skills/dir
 ### Good: adaptive interview that explores first
 
 ```
-Planner (you): [Task(general-purpose, model=haiku, "find authentication implementation in this repo")]
+Planner (you): [Task(general-purpose, "find authentication implementation in this repo")]
 Planner: [receives: "Auth is in src/auth/ using JWT with passport.js, with refresh tokens in src/auth/refresh.ts"]
 Planner: "I see this repo uses JWT with passport.js. For the new feature, should we extend the existing auth or add a separate flow?"
 ```

@@ -30,11 +30,11 @@ NEVER put a colored vertical bar on the left edge of a box: no `border-left: 3-5
 
 Burn 2026-09-17: four boxes in one session (report `.lead` / `.warn` / `.action`, then the A4 summary box built by a subagent whose prompt did not forbid it). User: "これは何回もやっている指摘".
 
-## Opus 5.5 default looks (HTML / PDF / slides)
+## Claude default looks (HTML / PDF / slides)
 
-Without design direction, Opus 5.5 falls back on a few default styles. Do not use any of these unless the user or the design system asks for it: a cream or off-white page background, italic accent words inside headlines, numbered "01 / 02 / 03" section labels, monospace labels, pill-shaped buttons. Subagent prompts that produce HTML list these five next to the left-bar ban.
+Without design direction, Claude falls back on a few default styles. Do not use any of these unless the user or the design system asks for it: a cream or off-white page background, italic accent words inside headlines, numbered "01 / 02 / 03" section labels, monospace labels, pill-shaped buttons. Subagent prompts that produce HTML list these five next to the left-bar ban.
 
-Source: Anthropic, Prompting Claude Opus 5.5, "Frontend design defaults" (a vague "avoid a generic AI look" only swaps one default for another; named patterns work). Adopted 2026-09-24.
+Source: Anthropic, Prompting Claude, "Frontend design defaults" (a vague "avoid a generic AI look" only swaps one default for another; named patterns work). Adopted 2026-09-24.
 
 ## Confusion Protocol
 

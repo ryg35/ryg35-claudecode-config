@@ -19,10 +19,11 @@ Scope (report these):
 
 Out of scope (do NOT report, another reviewer owns it):
 - schema, migration, index, transaction, RLS, input validation, secrets, production writes, authorization, web vulnerabilities (codex:data-security)
-- domain / business logic correctness against docs and real data (review-domain-logic)
-- comments, length, duplication, dead code (review-simplify)
-- whether CLI flags / env / config values actually take effect, PII in generated outputs (review-security-ops)
-- missing or weak tests (review-tests)
+- domain / business logic correctness against docs and real data (codex:tests-domain)
+- comments, length, duplication, dead code (codex:tests-domain)
+- whether CLI flags / env / config values actually take effect (codex:tests-domain)
+- PII in generated outputs (codex:data-security)
+- missing or weak tests (codex:tests-domain)
 
 How to work:
 1. Run `git diff <BASE>...HEAD` in this repository and read it.

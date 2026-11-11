@@ -5,7 +5,11 @@ user_invocable: true
 argument-hint: "<task description with parallel work items>"
 ---
 
+Follow `rules/model-roles.md` for every design, implementation and review step. Feature: Claude designs, Codex implements, Claude reviews. Bug: Codex designs, Claude implements, Codex reviews. Select reviewers from the actual implementer's opposite lineage; human-written PRs use both catalog lineages. Verification uses `Task(subagent_type="verifier")` on Claude in both flows and is an evidence check, not review. If Codex is unavailable (limit, login failure, crash), stop and ask. Tool access outside Codex's sandbox (MCP, browser connectors, etc.) is not unavailability: Claude implements and Codex reviews; announce that routing. Only the step taken over changes hands. Resolve model selection and any explicit override through `rules/model-roles.md`.
+
+
 # Ultrawork Skill (/ultrawork)
+
 
 ## Purpose
 
@@ -44,12 +48,12 @@ This is the parallelism layer. It does not own persistence (use `ralph` for that
 ## Steps
 
 1. **Ground intent.** Confirm whether the request is implementation, investigation, evaluation, or research. Do not start coding before that is clear.
-2. **Gather context in parallel.** Use direct `Read`/`Grep`/`Glob` for quick lookups. Use `Task` (general-purpose, Haiku) for broader codebase exploration. Fire these in the same message when independent.
+2. **Gather context in parallel.** Use direct `Read`/`Grep`/`Glob` for quick lookups. Use `Task(subagent_type="light-worker")` for broader codebase exploration. Fire these in the same message when independent.
 3. **Classify tasks by independence.** Mark each task as independent (can run in any wave) or dependent (waits for some prerequisite).
 4. **Build a small task graph for non-trivial work.** Wave 1 = independent tasks. Wave 2 = depends only on wave 1. Etc. For each task, write a 1-line acceptance criterion.
 5. **Route to model tiers:**
-   - Simple lookups, type exports, doc tweaks, small fixes → Haiku.
-   - Standard implementation, multi-file edits, focused refactors, complex multi-system analysis, architecture-changing refactors, hard debugging → **Codex `gpt-6.1-sol`** (`Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<task>' < /dev/null", run_in_background=true)`). Cost is not a constraint; Sol is the default for real implementation work regardless of complexity tier. Fall back to Claude `Task(general-purpose, model=sonnet|opus, ...)` only when the Codex CLI is unavailable/errors, or the task needs in-session tools Codex's sandbox cannot reach.
+   - Simple lookups, type exports, doc tweaks, small fixes → `Task(subagent_type="light-worker")`.
+   - Standard implementation, multi-file edits, focused refactors, complex multi-system analysis, architecture-changing refactors, hard debugging → **flow-selected implementer** (feature Codex invocation: `Bash("~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- '<task>' < /dev/null", run_in_background=true)`). Use Codex for feature implementation and Claude for bug implementation. If Codex is unavailable, stop and ask. Tool-access requirements route implementation to Claude and review to Codex.
 6. **Fire wave 1 simultaneously.** All independent tasks in the same message.
 7. **Wait for dependencies to clear**, then fire wave 2. Repeat.
 8. **Background long ops.** Builds, installs, full test suites use `Bash` with `run_in_background: true`. Track output with `TaskOutput`.
@@ -63,9 +67,9 @@ This is the parallelism layer. It does not own persistence (use `ralph` for that
 
 ## Tool usage
 
-- `Task(subagent_type="general-purpose", model="haiku", prompt=...)` for simple changes.
-- `Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- '<task>' < /dev/null", run_in_background=true)` for standard and complex implementation work (default). The wrapper redirects stdin from /dev/null internally (a raw backgrounded `codex exec` without that redirect hangs indefinitely; verified 2026-07-13).
-- `Task(subagent_type="general-purpose", model="sonnet"|"opus", prompt=...)` as the fallback for standard/complex work when Codex CLI is unavailable or the task needs in-session-only tools.
+- `Task(subagent_type="general-purpose", prompt=...)` for simple changes.
+- `Bash("~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- '<task>' < /dev/null", run_in_background=true)` for feature implementation. The wrapper redirects stdin from /dev/null internally (a raw backgrounded `codex exec` without that redirect hangs indefinitely; verified 2026-07-13).
+- `Task(subagent_type="general-purpose", prompt=...)` for bug implementation or required in-session tools; feature implementation uses Codex. Stop and ask when Codex is unavailable.
 - `Bash(command=..., run_in_background=true)` for package installs, builds, test suites longer than ~30s.
 - Foreground `Bash` and direct file tools for quick checks.
 
@@ -76,18 +80,18 @@ This is the parallelism layer. It does not own persistence (use `ralph` for that
 ### Good: three independent tasks fired together
 
 ```
-Task(general-purpose, model=haiku, "Add missing type export for Config interface in src/types/config.ts")
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- 'Implement the GET /api/users endpoint with input validation in src/api/users.ts' < /dev/null", run_in_background=true)
-Bash("~/.claude/scripts/codex-exec-bg.sh -m gpt-6.1-sol --sandbox workspace-write -- 'Add integration tests for the auth middleware in tests/auth.test.ts' < /dev/null", run_in_background=true)
+Task(general-purpose, "Add missing type export for Config interface in src/types/config.ts")
+Bash("~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- 'Implement the GET /api/users endpoint with input validation in src/api/users.ts' < /dev/null", run_in_background=true)
+Bash("~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- 'Add integration tests for the auth middleware in tests/auth.test.ts' < /dev/null", run_in_background=true)
 ```
 
-Independent tasks at appropriate tiers, all fired in one message. The trivial one stays on Haiku; the two substantive ones default to Sol.
+Independent tasks at appropriate tiers, all fired in one message. The trivial one stays with Claude (worker tier); feature implementation uses Codex; bug implementation uses Claude.
 
 ### Good: background long op alongside foreground task
 
 ```
 Bash("npm install && npm run build", run_in_background=true)
-Task(general-purpose, model=haiku, "Update README.md with the new API endpoints")
+Task(general-purpose, "Update README.md with the new API endpoints")
 ```
 
 The long build runs in background while the short doc update runs in the foreground.
@@ -105,10 +109,10 @@ These three are independent. Serializing them wastes wall-clock time.
 ### Bad: wrong tier
 
 ```
-Task(general-purpose, model=opus, "Add a missing semicolon to line 42 of utils.ts")
+Task(general-purpose, "Add a missing semicolon to line 42 of utils.ts")
 ```
 
-Opus on a trivial fix burns tokens for no quality gain. Use Haiku.
+Claude judgment tier on a trivial fix burns tokens for no quality gain. Use `Task(subagent_type="light-worker")`.
 
 ---
 

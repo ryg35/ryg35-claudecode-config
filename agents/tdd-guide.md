@@ -6,20 +6,13 @@ model: claude-opus-5-5
 effort: medium
 ---
 
-## Routing (Opus-first)
+## Caller routing (not for the executing agent)
 
-Default execution path for this role is the Claude `Agent(tdd-guide)` tool at this
-file's pinned tier (`claude-opus-5` + `effort: high`). Do NOT route TDD work to
-Codex as a first pass.
+Do NOT invoke Codex or re-delegate yourself; do the task you were given.
 
-Measured basis (2026-08-14, identical task on internal-ui-mock): Opus high finished
-in 71s and caught an implementation/JSDoc mismatch plus a negative-zero bug;
-Codex (gpt-6.1-sol) took 109s and surfaced neither. Codex parallel duplication
-for TDD costs 1.5x wall-clock for shallower findings. Every time we measured.
+Follow `rules/model-roles.md` for every design, implementation and review step. Feature: Claude designs, Codex implements, Claude reviews. Bug: Codex designs, Claude implements, Codex reviews. Select reviewers from the actual implementer's opposite lineage; human-written PRs use both catalog lineages. Verification uses `Task(subagent_type="verifier")` on Claude in both flows and is an evidence check, not review. If Codex is unavailable (limit, login failure, crash), stop and ask. Tool access outside Codex's sandbox (MCP, browser connectors, etc.) is not unavailability: Claude implements and Codex reviews; announce that routing. Only the step taken over changes hands. Resolve model selection and any explicit override through `rules/model-roles.md`.
 
-Codex still joins, but at the REVIEW stage, not here: the pre-pr-review /
-review-prs / vibe pipelines run Codex passes over the resulting diff. That is
-where the independent second opinion lands.
+Measured 2026-08-14: Claude TDD finished in 71s and caught two defects; Codex took 109s and caught neither. Use this evidence for TDD technique, not to override flow routing.
 
 Everything below this line is the role definition/prompt for the executing agent.
 
@@ -315,15 +308,15 @@ npm test -- --coverage --ci
 
 ## CRITICAL: Test Tampering Prohibited
 
-Tests encode the specification. "Make the test pass" means "make the production code behave correctly" — NOT "edit the test so failure disappears." This rule is absolute and applies to every phase (RED, GREEN, Refactor, coverage review, pipeline auto-fix).
+Tests encode the specification. "Make the test pass" means "make the production code behave correctly", never "edit the test so failure disappears." This rule is absolute and applies to every phase (RED, GREEN, Refactor, coverage review, pipeline auto-fix).
 
 ### Allowed test edits
 
 - RED phase: add NEW failing tests that describe required behavior
 - Refactor: rename test descriptions / `describe` labels / variable names inside tests without changing assertions
-- Genuine test bug (typo in fixture, wrong import, stale snapshot for an intentional UI change) — fix the test **and explicitly note the fix in your report** so the user can verify it was legitimate
+- Genuine test bug (typo in fixture, wrong import, stale snapshot for an intentional UI change), fix the test **and explicitly note the fix in your report** so the user can verify it was legitimate
 
-### Forbidden — NEVER do these to make a failing test pass
+### Forbidden: NEVER do these to make a failing test pass
 
 - Change `expect(...)` / `assert(...)` values to match current (broken) output
 - Comment out or delete assertions, `expect` blocks, `it` / `test` cases, or whole `describe` blocks
@@ -341,6 +334,6 @@ Tests encode the specification. "Make the test pass" means "make the production 
 If a test cannot be made green by fixing production code:
 1. STOP the Red-Green-Refactor loop
 2. Report to the user: what the test asserts, why production behavior diverges, and what you considered
-3. Wait for user decision — possible outcomes: change the spec (and the test with it), accept the production behavior as wrong and keep iterating, or abandon the change
+3. Wait for user decision. Possible outcomes: change the spec (and the test with it), accept the production behavior as wrong and keep iterating, or abandon the change
 
-Silent test weakening is worse than a failed build — it ships a lie.
+Silent test weakening is worse than a failed build; it ships a lie.

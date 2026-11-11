@@ -21,8 +21,8 @@ Optional flags (prepend before task description):
 ```
 GATE 1: Sync       → fetch-pull + conflict-check
 GATE 2: Plan       → reuse existing specs/<NNN>-<slug>/tasks.md (first) OR docs/plan/*.md (fallback) OR generate (last resort). User approval required.
-AUTO 3: Implement   → tdd
-AUTO 4: Review      → skills/code-review (catalog reviewers routed per diff + codex x2 always, in parallel, gates skipped in pipeline mode)
+AUTO 3: Implement   → feature: Codex; bug: Claude tdd-guide
+AUTO 4: Review      → skills/code-review (reviewers routed per flow and diff, in parallel, gates skipped in pipeline mode)
 AUTO 5: Verify      → verify → build-fix (if needed) → smoke-test
 AUTO 5.5: E2E       → e2e-runner (if UI/route changes detected)
 AUTO 6: Deps        → dependency-check (if new packages added)
@@ -50,7 +50,7 @@ Phases:
   1. [GATE] Sync        - Fetch, pull, conflict check
   2. [GATE] Plan        - Reuse existing plan (preferred) or generate new
   3. [AUTO] Implement   - TDD: test → code → refactor
-  4. [AUTO] Review      - skills/code-review: routed review-* agents + codex x2
+  4. [AUTO] Review      - skills/code-review: opposite the actual implementer lineage; human = both
   5. [AUTO] Verify      - Build, types, lint, tests
   5.5 [AUTO] E2E        - Playwright journey tests (if UI/route changed)
   6. [AUTO] Deps        - Dependency audit (if applicable)
@@ -84,11 +84,13 @@ Phase 1 COMPLETE: Sync
 
 ### Phase 2: Plan [GATE]
 
-**Goal**: Resolve an approved implementation plan — **prefer an existing plan over generating a new one**.
+Classify and record `$FLOW` before planning, per `rules/model-roles.md`: existing wrong behavior is a bug; everything else, including refactors and docs, is a feature. Announce the flow: feature = Claude design, Codex implementation, Claude review; bug = Codex design, Claude implementation, Codex review. Use the matching design role for any planning or design pass below. Preserve `$FLOW` across resumes; classify before resuming Phase 3 or 4 if absent.
+
+**Goal**: Resolve an approved implementation plan. **Prefer an existing plan over generating a new one**.
 
 This phase is **plan-first (opt-in generation)**. `/vibe` assumes the user has already run `/plan` and only falls back to generating a new plan when nothing usable exists. Rationale: the user's established workflow is plan-then-vibe; auto-generating a fresh plan every time wastes the prior thinking.
 
-#### Step 2.1 — Discover existing plans
+#### Step 2.1, Discover existing plans
 
 **Discovery order: `specs/` first, `docs/plan/` second, generate last.** A repo running SPEC-driven work keeps its work list in `specs/<NNN>-<slug>/tasks.md` (see Rule 6 in `~/.claude/skills/directory-conventions/SKILL.md`). Globbing only `docs/plan/*.md` makes vibe ignore that work list and generate a duplicate plan, silently.
 
@@ -108,16 +110,16 @@ This phase is **plan-first (opt-in generation)**. `/vibe` assumes the user has a
    - Else if multiple `backlog` plans → present the list via `AskUserQuestion`.
    - Else (no candidates) → fall through to Step 2.2 (generate).
 
-#### Step 2.2 — Generate plan (fallback only)
+#### Step 2.2, Generate plan (fallback only)
 
 Only reached when Step 2.1 found nothing, neither a SPEC set under `specs/` nor a plan under `docs/plan/`.
 
 1. Tell the user explicitly: `No existing plan found under docs/plan/. Generating a new one via planner. (Tip: run /plan first next time to keep vibe plan-first.)`
 2. **Load project context**: Glob for `docs/**/*.md` and `.claude/project-context.json`. Read what exists (requirements, architecture, tech-stack, api-spec, schema, previous plans). Pass all discovered context to the planner agent.
-3. Invoke the **planner** agent with the task description + project context.
+3. Feature: invoke the **planner** agent with the task description + project context. Bug: use `~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- '<task + project guidance + plan template + chosen plan path; write the plan file at that path>'` for the design pass; resolve model selection through `rules/model-roles.md`. If Codex is unavailable, STOP and ask the user to wait or approve a role swap per `rules/model-roles.md`.
 4. The planner writes the result to `docs/plan/<verb-topic>.md` with `status: backlog` per the `/plan` skill conventions.
 
-#### Step 2.3 — Present and approve
+#### Step 2.3, Present and approve
 
 1. Read the chosen plan file and present:
    - Plan file path + current `status`
@@ -146,10 +148,13 @@ Phase 2 COMPLETE: Plan approved
 
 ### Phase 3: Implement [AUTO]
 
-**Goal**: Implement the feature using TDD methodology.
+**Goal**: Implement the approved plan using TDD and the Phase 2 flow in `rules/model-roles.md`.
 
-0. **Mark plan as in-progress**: If a plan file was approved in Phase 2, update its frontmatter from `status: active` to `status: in-progress` before invoking tdd-guide. Skip if no plan file exists.
-1. Invoke the **tdd-guide** agent with the approved plan (`$PLAN_FILE`).
+0. **Mark plan as in-progress**: If a plan file was approved in Phase 2, update its frontmatter from `status: active` to `status: in-progress` before invoking the selected implementer. Skip if no plan file exists.
+1. Route implementation using `$FLOW`:
+   - **Feature**: invoke `~/.claude/scripts/codex-exec-bg.sh --sandbox workspace-write -- '<approved plan, acceptance criteria, project guidance and verification commands>'` with Bash `run_in_background: true`. Codex implements; it reads its model from `~/.codex/config.toml`. Resolve model selection and explicit overrides through `rules/model-roles.md`.
+   - **Bug**: invoke the Claude **tdd-guide** agent with the approved plan (`$PLAN_FILE`).
+   - **Codex unavailable** (limit, login failure, crash): STOP at that step and ask the user to wait or explicitly approve Claude taking it. Never silently swap. Only the step taken over changes hands. Select review from the actual implementer's opposite lineage and disclose the change in the PR body, per `rules/model-roles.md`. Tool-access limits are not unavailability: Claude implements and Codex reviews; announce it.
    - For a SPEC set, pass the whole `$SPEC_DIR`: `tasks.md` is the work list, and each task's `完了条件` plus the `FR-00N` / `AS-N` it traces to in `spec.md` are the RED/GREEN criteria. See the Input Source section of `~/.claude/agents/tdd-guide.md`.
 2. For each implementation step:
    - Write failing tests (RED)
@@ -162,12 +167,12 @@ Phase 2 COMPLETE: Plan approved
 
 #### CRITICAL: Test Tampering Prohibited (applies to Phases 3, 4, 5)
 
-Tests represent the specification. Passing tests by weakening them — not by fixing the production code — silently destroys the safety net. This is **strictly forbidden** in every AUTO phase.
+Tests represent the specification. Passing tests by weakening them, not by fixing the production code, silently destroys the safety net. This is **strictly forbidden** in every AUTO phase.
 
 **Allowed test edits**:
 - RED phase: adding NEW failing tests that describe new required behavior
 - Renaming test descriptions / `describe` labels (no assertion changes)
-- Fixing a demonstrable bug in the test itself (typo in fixture, wrong import) — **must be flagged to the user in the phase report**
+- Fixing a demonstrable bug in the test itself (typo in fixture, wrong import), **must be flagged to the user in the phase report**
 
 **Forbidden test edits in any AUTO phase**:
 - Changing `expect(...)` / `assert(...)` values to match current (broken) output
@@ -178,7 +183,7 @@ Tests represent the specification. Passing tests by weakening them — not by fi
 - Replacing real assertions with `expect(true).toBe(true)` or tautological checks
 - Mocking the function under test to return the expected output
 
-If tests cannot be made green by changing production code, **STOP and ask the user** — do not "fix" by touching tests.
+If tests cannot be made green by changing production code, **STOP and ask the user**, do not "fix" by touching tests.
 
 ```
 Phase 3 COMPLETE: Implementation
@@ -202,7 +207,8 @@ implementation, no copies.
 
 Parameters to pass in:
 - `mode=pipeline` ... **both gates are skipped.** `/vibe` is a pipeline; the user
-  gate is GATE 8 Ship. Do not call AskUserQuestion in Phase 4.
+  gate is GATE 8 Ship. Stop when Codex is unavailable or the selected review would share the actual implementer's lineage. A flow mismatch alone does not require a stop.
+- flow = `$FLOW`: feature implementation by Codex gets Claude reviewers only; bug implementation by Claude gets Codex review only. Choose review lineage from the actual implementer per `rules/model-roles.md`; the reviewer must not share its lineage or context.
 - target = local diff against `$BASE_BRANCH` from Phase 1
 - fix scope = CRITICAL + HIGH auto-fixed (fixed policy for pipeline mode).
   MEDIUM only when the fix is obvious, LOW noted and skipped.
@@ -220,7 +226,7 @@ Two rules from this file bind inside the skill run:
 ```
 Phase 4 COMPLETE: Review
   起動:                 <Step 1.6 line> / 見送り: <...>
-  Codex:                [OK | FAILED (<name>) -> fallback <agent>]
+  Codex:                [SKIPPED (Codex implementer) | OK | FAILED (<name>), stopped for user decision]
   Resilience Review:    [RAN | SKIPPED (trigger not met)]
   Findings:             X CRITICAL, Y HIGH, Z MEDIUM, W LOW
   Fixed:                N (CRITICAL + HIGH)
@@ -244,9 +250,10 @@ Phase 4 COMPLETE: Review
    - Invoke **build-error-resolver** agent to fix
    - Re-run verification
    - If still failing after 3 attempts: **STOP and ask user**
-   - **Test tampering prohibition (Phase 3 rules) fully applies.** When test failures are encountered here, `build-error-resolver` must fix the production code — NOT edit tests, skip tests, or lower coverage thresholds. If a test genuinely contains a bug (typo, wrong fixture), flag it to the user before touching the test.
+   - **Test tampering prohibition (Phase 3 rules) fully applies.** When test failures are encountered here, `build-error-resolver` must fix the production code, NOT edit tests, skip tests, or lower coverage thresholds. If a test genuinely contains a bug (typo, wrong fixture), flag it to the user before touching the test.
 3. Run smoke test for additional confidence
-4. Report verification status
+4. Run `Task(subagent_type="verifier")` in both flows to check fresh evidence against acceptance criteria. Keep this in bug flow: evidence verification is not review.
+5. Report verification status
 
 ```
 Phase 5 COMPLETE: Verify
@@ -297,15 +304,15 @@ Phase 5 RETRY: attempt 2/3
 
 ### Phase 5.5: E2E [AUTO - conditional]
 
-**Goal**: Update and run Playwright E2E tests for affected user flows — **only when the project already has E2E infrastructure**.
+**Goal**: Update and run Playwright E2E tests for affected user flows, **only when the project already has E2E infrastructure**.
 
 **Trigger**: This phase runs only when BOTH of the following are true:
 
-1. **Existing E2E infrastructure** — at least one of these exists in the repo:
+1. **Existing E2E infrastructure**, at least one of these exists in the repo:
    - `playwright.config.ts` / `playwright.config.js` / `playwright.config.mjs`
    - `tests/e2e/` directory (non-empty)
    - `e2e/` directory (non-empty)
-2. **UI/route change in diff** — `git diff $BASE_BRANCH...HEAD --name-only` includes any of `app/`, `pages/`, `src/app/`, `src/pages/`, `components/`, `src/components/`, `routes/`, `router/`, `playwright.config.*`, `tests/e2e/`, `e2e/`
+2. **UI/route change in diff**, `git diff $BASE_BRANCH...HEAD --name-only` includes any of `app/`, `pages/`, `src/app/`, `src/pages/`, `components/`, `src/components/`, `routes/`, `router/`, `playwright.config.*`, `tests/e2e/`, `e2e/`
 
 ```bash
 # Condition 1: has existing E2E infra
@@ -329,9 +336,9 @@ Skip rules:
    - Base branch diff (`git diff $BASE_BRANCH...HEAD`)
    - List of changed UI/route files
    - The approved plan from Phase 2
-   - Instruction: "The project already has Playwright set up. Update or add specs under the existing `tests/e2e/` (or `e2e/`) directory for the affected flows using the existing config and Page Object Model conventions. Run only the affected spec files. Do not create `playwright.config.*` — it already exists."
+   - Instruction: "The project already has Playwright set up. Update or add specs under the existing `tests/e2e/` (or `e2e/`) directory for the affected flows using the existing config and Page Object Model conventions. Run only the affected spec files. Do not create `playwright.config.*`, it already exists."
 3. The agent must:
-   - Use the existing `playwright.config.*` — do not overwrite.
+   - Use the existing `playwright.config.*`, do not overwrite.
    - Create/update spec files following the repo's existing convention.
    - Run only the new/updated specs (`npx playwright test <paths>`), not the full suite (the full suite runs in CI).
    - Report per-spec pass/fail, flaky detection, and artifact paths.
@@ -339,7 +346,7 @@ Skip rules:
    - ≤2 flaky failures: re-run with `--retries=1`. If still failing, **STOP and ask user**.
    - Stale selector due to intentional UI change: update the spec (not product code) and re-run once.
    - Max 3 auto-fix attempts, then **STOP**.
-5. Never run against production — enforce `process.env.NODE_ENV !== 'production'` in spec setup.
+5. Never run against production, enforce `process.env.NODE_ENV !== 'production'` in spec setup.
 
 ```
 Phase 5.5 COMPLETE: E2E
@@ -417,7 +424,7 @@ Target: origin/<branch> → PR against main
 ```
 
 If Resilience Gate was `WARN`, explicitly list the HIGH findings in this summary and require the user to acknowledge them (include `[resilience-warn]` token in the prompt) before proceeding.
-If Resilience Gate was `BLOCK`, the pipeline should NOT have reached here — Phase 4 would have halted. If it did reach here somehow, abort Phase 8 and return to Phase 4 for manual fix.
+If Resilience Gate was `BLOCK`, the pipeline should NOT have reached here, Phase 4 would have halted. If it did reach here somehow, abort Phase 8 and return to Phase 4 for manual fix.
 
 3. **ASK user**: "Ship it? (yes / edit message / abort)"
 4. On approval:

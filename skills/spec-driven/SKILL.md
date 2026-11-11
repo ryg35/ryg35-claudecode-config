@@ -4,7 +4,7 @@ description: "SPEC駆動開発。specs/<NNN>-<slug>/ に spec.md + plan.md + tas
 user_invocable: true
 argument-hint: "[<機能名 or specs/<NNN>-<slug>>]"
 ---
-> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/`、omc-teams / sciomc は `skills/team/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
+> 所在 (2026-09-13 統合): autopilot / deep-interview / codex-converge は `skills/plan/references/`、ultrawork / ultraqa は `skills/ralph/references/` にある。名前で Skill 起動せず、その SKILL.md を Read して従う。
 
 
 # SPEC駆動開発 (/spec-driven)
@@ -148,6 +148,19 @@ grep -Fc '[要確認:' spec.md
 `[要確認:` が0件でも、**数値境界は毎回この定型で確認する。「以上 / 以下 / 超える / 未満」のどれか、元の文言と突き合わせたか。**
 EARS は文型を強制するが、不等号の向きは守らない。実測 2026-08-17: 原文の「10k 以上」が変換で「超える」に反転し、
 境界ちょうどの挙動が逆になった仕様がドラフトのまま通りかけた。
+
+**`[要確認:` が0件でも、要件の穴を次の5観点で必ず1回洗う。** 書いた本人は自分の前提を `[要確認:` にしない。毎回そうなる。
+見つけた穴は `[要確認: ...]` として spec.md に足し、このゲートをもう一度回す。
+
+1. **聞いていない質問** ... 要件ごとに「完全か / テストできるか / 一意に読めるか」。外れたら、なぜ困るかを添える
+2. **上限下限のない項目** ... 件数・サイズ・時間・回数。具体的な数値案を付けて聞く
+3. **検証していない前提** ... ASM に書き、確かめ方を1行添える。確かめ方が書けない前提は質問に回す
+4. **スコープが膨らむ場所** ... 「含まない (次イテレーション)」に明記する
+5. **合否で測れない受入基準** ... 主観語の SC / AS は pass/fail に書き直す
+
+**正常系が未定義のままエッジケースを数えない。** 先に正常系、次に影響と起きやすさの大きい順。
+指摘は名指しで書く。「要件が曖昧」ではなく「メール重複時に 409 を返すか黙って更新するかが未定」。
+**穴が無ければ「無い」と書く。問題を作らない。**
 
 ### Step 3: plan
 

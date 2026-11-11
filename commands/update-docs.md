@@ -29,4 +29,21 @@ Source of truth is `package.json` and `.env.example`. Never hand-write what can 
 
 High-level structure only, not implementation details.
 
+## Per-directory AGENTS.md (optional)
+
+Only when the user asks for per-directory AGENTS.md files, write one per directory with this template:
+
+```markdown
+<!-- Parent: ../AGENTS.md -->
+# <Directory name>
+## Purpose
+<one paragraph: what lives here and its role>
+## Key files
+| File | Description |
+## Conventions
+<patterns, gotchas, how to test>
+## Dependencies
+<internal modules and external packages used here>
+```
+
 Finish with a diff summary.

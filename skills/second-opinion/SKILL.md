@@ -1,6 +1,6 @@
 ---
 name: second-opinion
-description: Run Codex (GPT-5 family) as an independent reviewer of Claude's own conclusion, then present the **diff** between the two to the user. Never output a merged "we both agree" verdict. Aligns with ETHOS "User Sovereignty". Use for architectural decisions, library selection, complex bug root-cause hypotheses.
+description: Run Codex as an independent reviewer of Claude's own conclusion, then present the **diff** between the two to the user. Never output a merged "we both agree" verdict. Aligns with ETHOS "User Sovereignty". Use for architectural decisions, library selection, complex bug root-cause hypotheses.
 user_invocable: true
 argument-hint: "<question / decision / hypothesis to second-opinion>"
 ---
@@ -9,7 +9,7 @@ argument-hint: "<question / decision / hypothesis to second-opinion>"
 
 ## Purpose
 
-Take Claude's conclusion, ask an independent model (Codex / GPT-5 family) to review it, and present **the diff** to the user. Do not present consensus or a merged verdict. The user decides.
+Take Claude's conclusion, ask an independent model (Codex) to review it, and present **the diff** to the user. Do not present consensus or a merged verdict. The user decides.
 
 Strict ETHOS "User Sovereignty" enforcement:
 > An AI recommendation is not a decision. Even if Claude and another model agree, that is still a recommendation, not a decision.

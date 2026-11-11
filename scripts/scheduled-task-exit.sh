@@ -23,6 +23,8 @@ ACTIVE="$(printf '%s' "$IN" | python3 -c 'import json,sys;d=json.load(sys.stdin)
 # jsonl 内では name=\"na-sync\" とエスケープされている。name=" で探すと全件外れる(janitor と同じ罠)
 NAME="$(head -n 80 "$TRANSCRIPT" | grep -o '<scheduled-task name=\\\{0,1\}"[^"\\]*' | head -n1 | sed 's/.*"//')"
 [ -n "$NAME" ] || exit 0
+# /loop を常駐させるタスクは止めない。前日以前の分は janitor が刈る
+case "$NAME" in session-title-refresh) exit 0;; esac
 # フックの親を辿って claude 本体の PID を見つける(disclaimer ラッパーは対象外)
 pid=$PPID
 target=""
