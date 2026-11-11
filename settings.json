@@ -407,11 +407,6 @@
           {
             "type": "command",
             "command": "~/.claude/scripts/pre-tool-enforcer-guard.sh"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/scripts/client-project-A-release-guard.sh",
-            "timeout": 30
           }
         ]
       }
